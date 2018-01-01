@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "Tastory:Dev:Howard": {
+      "applicationId": "L9lKtiKM6p7tltl32yfKs2ILLEJrnGpo1hwevYck"
+    },
+    "_default": {
+      "link": "Tastory:Dev:Howard"
+    }
+  }
+}
