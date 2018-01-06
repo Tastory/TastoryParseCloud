@@ -10,6 +10,9 @@ console.log("Tastory Parse Cloud Code main.js Running")
 
 // MARK: - Parse Cloud Code references
 
+// Project Common File references
+var utilitiesJs = require("./utilities/debugConsole.js")
+
 // Model JS File references
 var reputableClaimJs = require("./model/reputation/reputableClaim.js");
 var reputableStoryJs = require("./model/reputation/reputableStory.js");

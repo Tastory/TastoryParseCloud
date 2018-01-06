@@ -6,8 +6,6 @@
 //  Copyright © 2018 Tastry. All rights reserved.
 //
 
-"use strict"
-
 class ReputableStory extends Parse.Object {
 
   constructor() {
