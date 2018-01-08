@@ -17,19 +17,105 @@ class ReputableStory extends Parse.Object {
   private static avgMomentNumberKey: string = "avgMomentNumber";
   private static totalViewsKey: string = "totalViews";
 
+
   constructor() {
     super("ReputableStory");
   }
 
+
+  static getStoryWithLog(storyId: string): Parse.Promise<ReputableStory> {
+    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
+
+    let promise = new Parse.Promise<ReputableStory>();
+    let query = new Parse.Query(ReputableStory);
+    query.equalTo("storyId", storyId);
+    query.find().then(
+
+      function(results) {
+        let reputableStory: ReputableStory
+
+        if (!results || results.length === 0) {
+          reputableStory = new ReputableStory();
+          reputableStory.initializeRollUp(reputationScoreStoryMetricVer);
+          debugConsole.log(SeverityEnum.Debug, "New Reputation created for storyId " + storyId);
+
+        } else {
+          let result = results[0];
+
+          if (results.length > 1) {
+            debugConsole.log(SeverityEnum.Warning, results.length + " reputations for storyId " + storyId + " found");
+          }
+          result.debugConsoleLog(SeverityEnum.Verbose);
+          reputableStory = result;
+        }
+        promise.resolve(reputableStory);
+      },
+
+      function(error) {
+        promise.reject(error);
+      }
+    );
+
+    return promise;
+  }
+
+
+  static incUsersLikedFor(storyId: string, callback: AnyErrorMsgFunction) {
+    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
+    let masterKeyOption: Parse.UseMasterKeyOption = { useMasterKey: true };
+    let reputableStory: ReputableStory;
+    let discoverabilityScore: number;
+
+    ReputableStory.getStoryWithLog(storyId).then(function(result) {
+      result.incUsersLiked();
+      return result.save(null, masterKeyOption);
+
+    }).then(function(result) {
+      reputableStory = result;
+      discoverabilityScore = result.calculateStoryScore();
+      let query = new Parse.Query(FoodieStory);
+      return query.get(storyId);
+
+    }).then(function(foodieStory) {
+      foodieStory.set("discoverability", discoverabilityScore);
+      return foodieStory.save(null, masterKeyOption);
+
+    }).then(
+      
+      function(foodieStory) {
+        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "success")
+        callback(reputableStory, "Parse Like for Story ID: " + storyId + "success");
+      },
+
+      function(error) {
+        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+      }
+    );
+  }
+
+
+  private debugConsoleLog(severity: SeverityEnum) {
+    debugConsole.log(severity, "ReputableStory ID: " + this.get("objectId") +
+                               "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
+                               "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
+                               "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
+                               "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
+                               "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
+                               "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
+                               "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
+                               "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
+  }
+
   initializeRollUp(scoreMetricVer: number) {
-    this.set("scoreMetricVer", scoreMetricVer);
-    this.set("usersViewed", 0);
-    this.set("usersLiked", 0);
-    this.set("usersSwipedUp", 0);
-    this.set("usersClickedVenue", 0);
-    this.set("usersClickedProfile", 0);
-    this.set("avgMomentNumber", 0);
-    this.set("totalViews", 0);
+    this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
+    this.set(ReputableStory.usersViewedKey, 0);
+    this.set(ReputableStory.usersLikedKey, 0);
+    this.set(ReputableStory.usersSwipedUpKey, 0);
+    this.set(ReputableStory.usersClickedVenueKey, 0);
+    this.set(ReputableStory.usersClickedProfileKey, 0);
+    this.set(ReputableStory.avgMomentNumberKey, 0);
+    this.set(ReputableStory.totalViewsKey, 0);
   }
 
   // Explicit Claims
@@ -46,7 +132,7 @@ class ReputableStory extends Parse.Object {
   // Implicit Claims
   incUsersSwipedUp() {
     let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
-    this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp)
+    this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp);
   }
 
   incUsersClickedVenue() {
@@ -80,8 +166,8 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
   }
 
-  calculateStoryScore() {
-
+  calculateStoryScore(): number {
+    return 0;
   }
 }
 

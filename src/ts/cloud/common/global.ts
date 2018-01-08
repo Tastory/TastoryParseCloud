@@ -7,3 +7,5 @@
 //
 
 type AnyErrorMsgFunction = (anyArg: any, errorMsg: string) => void
+
+var reputationScoreStoryMetricVer: number = 1;

@@ -123,16 +123,16 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
     storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
     debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + "saving a new Story Reaction Claim");
 
-    storyReactionClaim.save(null, masterKeyOption).then(function(object) {
-      // TODO: - Do Roll-up Here, or do it as a then case
-      // For now, just log and returned. Also note returned object isn't even correct
-      debugConsole.log(SeverityEnum.Verbose, "Parse save new Story Reaction success. Calling back for now");
-      callback(object, "Parse save new Story Reaction Success");
+    storyReactionClaim.save(null, masterKeyOption).then(
+      function(object) {
+        ReputableStory.incUsersLikedFor(storyId, callback);
+      },
 
-    }, function(error) {
-      debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-      callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-    });
+      function(error) {
+        debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+        callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+      }
+    );
   }
 
   // Previous Reactions found
@@ -153,16 +153,16 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
       Parse.Object.destroyAll(existingReactions, masterKeyOption).then(function() {
         return storyReactionClaim.save(null, masterKeyOption);
 
-      }).then(function(object) {
-        // TODO: - Do Roll-up Here, or do it as a then case
-        // For now, just log and returned. Also note returned object isn't even correct
-        debugConsole.log(SeverityEnum.Verbose, "Parse clear & save new Story Reaction success. Calling back for now");
-        callback(object, "Parse clear & save new Story Reaction Success");
+      }).then(
+        function(object) {
+          ReputableStory.incUsersLikedFor(storyId, callback);
+        },
 
-      }, function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Parse clear & save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-        callback(null, "Parse clear & save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-      });
+        function(error) {
+          debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+          callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+        }
+      );
 
     // Exiting Reaction matches the Desired Reaction
     } else {
