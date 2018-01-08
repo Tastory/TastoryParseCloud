@@ -8,6 +8,7 @@
 
 class ReputableStory extends Parse.Object {
 
+  private static storyIdKey: string = "storyId";
   private static scoreMetricVerKey: string = "scoreMetricVer";
   private static usersViewedKey: string = "usersViewed";
   private static usersLikedKey: string = "usersLiked";
@@ -23,6 +24,10 @@ class ReputableStory extends Parse.Object {
   }
 
 
+  private static saveReputationAndDiscoverability() {
+
+  }
+
   static getStoryWithLog(storyId: string): Parse.Promise<ReputableStory> {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
 
@@ -36,7 +41,7 @@ class ReputableStory extends Parse.Object {
 
         if (!results || results.length === 0) {
           reputableStory = new ReputableStory();
-          reputableStory.initializeRollUp(reputationScoreStoryMetricVer);
+          reputableStory.initializeReputation(storyId, reputationScoreStoryMetricVer);
           debugConsole.log(SeverityEnum.Debug, "New Reputation created for storyId " + storyId);
 
         } else {
@@ -78,13 +83,14 @@ class ReputableStory extends Parse.Object {
 
     }).then(function(foodieStory) {
       foodieStory.set("discoverability", discoverabilityScore);
+      foodieStory.set("reputation", reputableStory.get("objectId"));
       return foodieStory.save(null, masterKeyOption);
 
     }).then(
-      
+
       function(foodieStory) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "success")
-        callback(reputableStory, "Parse Like for Story ID: " + storyId + "success");
+        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success")
+        callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
       },
 
       function(error) {
@@ -107,7 +113,8 @@ class ReputableStory extends Parse.Object {
                                "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
   }
 
-  initializeRollUp(scoreMetricVer: number) {
+  initializeReputation(storyId: string, scoreMetricVer: number) {
+    this.set(ReputableStory.storyIdKey, storyId);
     this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
     this.set(ReputableStory.usersViewedKey, 0);
     this.set(ReputableStory.usersLikedKey, 0);
@@ -117,6 +124,10 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.avgMomentNumberKey, 0);
     this.set(ReputableStory.totalViewsKey, 0);
   }
+
+
+
+
 
   // Explicit Claims
   incUsersLiked() {
@@ -167,7 +178,7 @@ class ReputableStory extends Parse.Object {
   }
 
   calculateStoryScore(): number {
-    return 0;
+    return 100;
   }
 }
 

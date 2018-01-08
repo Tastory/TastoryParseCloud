@@ -104,10 +104,6 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 function storySetReactionClaim(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
   debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts - storySetReactionClaim() executed");
 
-  for (let claim of claimsHistory) {
-    debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.get("claimType") + " StoryClaimType: " + claim.get("storyClaimType"));
-  }
-
   // Look at the claims history for already set reactions
   let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
                                                          claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
@@ -159,8 +155,8 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
         },
 
         function(error) {
-          debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-          callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+          debugConsole.log(SeverityEnum.Warning, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+          callback(null, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
         }
       );
 
@@ -177,7 +173,37 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
 function storyClearReactionClaim(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
   debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyClearReactionClaim.name + "() executed");
 
+  // Look at the claims history for already set reactions
+  let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
+                                                         claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
 
+  debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
+
+  // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
+  let masterKeyOption: Parse.UseMasterKeyOption = { useMasterKey: true };
+
+  // Why is the client even asking for a clear then?
+  if (existingReactions.length === 0) {
+    debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+    callback(null, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+
+  } else {
+    let sameReactions = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
+
+    // Matching reaction found, Clear
+    if (sameReactions.length >= 1) {
+      Parse.Object.destroyAll(sameReactions, masterKeyOption).then(
+        function() {
+          //ReputableStory.decUsersLikedFor(storyId, callback);
+        },
+
+        function(error) {
+          debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
+          callback(null, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
+        }
+      )
+    }
+  }
 }
 
 

@@ -14,6 +14,7 @@ console.log("Tastory Parse Cloud Code main.js Running");
 //  Created by Howard Lee on 2018-01-05
 //  Copyright © 2018 Tastry. All rights reserved.
 //
+var reputationScoreStoryMetricVer = 1;
 //
 //  claimOnStory.ts
 //  TastoryParseCloud
@@ -97,9 +98,6 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
 }
 function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts - storySetReactionClaim() executed");
-    for (let claim of claimsHistory) {
-        debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.get("claimType") + " StoryClaimType: " + claim.get("storyClaimType"));
-    }
     // Look at the claims history for already set reactions
     let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
         claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
@@ -112,10 +110,7 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
         storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
         debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + "saving a new Story Reaction Claim");
         storyReactionClaim.save(null, masterKeyOption).then(function (object) {
-            // TODO: - Do Roll-up Here, or do it as a then case
-            // For now, just log and returned. Also note returned object isn't even correct
-            debugConsole.log(SeverityEnum.Verbose, "Parse save new Story Reaction success. Calling back for now");
-            callback(object, "Parse save new Story Reaction Success");
+            ReputableStory.incUsersLikedFor(storyId, callback);
         }, function (error) {
             debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
             callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
@@ -137,13 +132,10 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
             Parse.Object.destroyAll(existingReactions, masterKeyOption).then(function () {
                 return storyReactionClaim.save(null, masterKeyOption);
             }).then(function (object) {
-                // TODO: - Do Roll-up Here, or do it as a then case
-                // For now, just log and returned. Also note returned object isn't even correct
-                debugConsole.log(SeverityEnum.Verbose, "Parse clear & save new Story Reaction success. Calling back for now");
-                callback(object, "Parse clear & save new Story Reaction Success");
+                ReputableStory.incUsersLikedFor(storyId, callback);
             }, function (error) {
-                debugConsole.log(SeverityEnum.Warning, "Parse clear & save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-                callback(null, "Parse clear & save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+                debugConsole.log(SeverityEnum.Warning, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+                callback(null, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
             });
             // Exiting Reaction matches the Desired Reaction
         }
@@ -156,6 +148,29 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
 }
 function storyClearReactionClaim(reporterId, storyId, reactionType, claimsHistory, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyClearReactionClaim.name + "() executed");
+    // Look at the claims history for already set reactions
+    let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
+        claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
+    debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
+    // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
+    let masterKeyOption = { useMasterKey: true };
+    // Why is the client even asking for a clear then?
+    if (existingReactions.length === 0) {
+        debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+        callback(null, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+    }
+    else {
+        let sameReactions = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
+        // Matching reaction found, Clear
+        if (sameReactions.length >= 1) {
+            Parse.Object.destroyAll(sameReactions, masterKeyOption).then(function () {
+                //ReputableStory.decUsersLikedFor(storyId, callback);
+            }, function (error) {
+                debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
+                callback(null, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
+            });
+        }
+    }
 }
 function storyActionClaim(reporterId, storyId, actionType, claimsHistory, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyActionClaim.name + "() executed");
@@ -163,6 +178,19 @@ function storyActionClaim(reporterId, storyId, actionType, claimsHistory, callba
 function storyViewedClaim(reporterId, storyId, momentNumber, claimsHistory, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyViewedClaim.name + "() executed");
 }
+//
+//  foodieStory.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+class FoodieStory extends Parse.Object {
+    constructor() {
+        super("FoodieStory");
+    }
+}
+Parse.Object.registerSubclass("FoodieStory", FoodieStory);
 //
 //  reputableClaim.ts
 //  TastoryParseCloud
@@ -230,15 +258,80 @@ class ReputableStory extends Parse.Object {
     constructor() {
         super("ReputableStory");
     }
-    initializeRollUp(scoreMetricVer) {
-        this.set("scoreMetricVer", scoreMetricVer);
-        this.set("usersViewed", 0);
-        this.set("usersLiked", 0);
-        this.set("usersSwipedUp", 0);
-        this.set("usersClickedVenue", 0);
-        this.set("usersClickedProfile", 0);
-        this.set("avgMomentNumber", 0);
-        this.set("totalViews", 0);
+    static saveReputationAndDiscoverability() {
+    }
+    static getStoryWithLog(storyId) {
+        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
+        let promise = new Parse.Promise();
+        let query = new Parse.Query(ReputableStory);
+        query.equalTo("storyId", storyId);
+        query.find().then(function (results) {
+            let reputableStory;
+            if (!results || results.length === 0) {
+                reputableStory = new ReputableStory();
+                reputableStory.initializeReputation(storyId, reputationScoreStoryMetricVer);
+                debugConsole.log(SeverityEnum.Debug, "New Reputation created for storyId " + storyId);
+            }
+            else {
+                let result = results[0];
+                if (results.length > 1) {
+                    debugConsole.log(SeverityEnum.Warning, results.length + " reputations for storyId " + storyId + " found");
+                }
+                result.debugConsoleLog(SeverityEnum.Verbose);
+                reputableStory = result;
+            }
+            promise.resolve(reputableStory);
+        }, function (error) {
+            promise.reject(error);
+        });
+        return promise;
+    }
+    static incUsersLikedFor(storyId, callback) {
+        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
+        let masterKeyOption = { useMasterKey: true };
+        let reputableStory;
+        let discoverabilityScore;
+        ReputableStory.getStoryWithLog(storyId).then(function (result) {
+            result.incUsersLiked();
+            return result.save(null, masterKeyOption);
+        }).then(function (result) {
+            reputableStory = result;
+            discoverabilityScore = result.calculateStoryScore();
+            let query = new Parse.Query(FoodieStory);
+            return query.get(storyId);
+        }).then(function (foodieStory) {
+            foodieStory.set("discoverability", discoverabilityScore);
+            foodieStory.set("reputation", reputableStory.get("objectId"));
+            return foodieStory.save(null, masterKeyOption);
+        }).then(function (foodieStory) {
+            debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success");
+            callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
+        }, function (error) {
+            debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+            callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        });
+    }
+    debugConsoleLog(severity) {
+        debugConsole.log(severity, "ReputableStory ID: " + this.get("objectId") +
+            "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
+            "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
+            "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
+            "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
+            "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
+            "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
+            "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
+            "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
+    }
+    initializeReputation(storyId, scoreMetricVer) {
+        this.set(ReputableStory.storyIdKey, storyId);
+        this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
+        this.set(ReputableStory.usersViewedKey, 0);
+        this.set(ReputableStory.usersLikedKey, 0);
+        this.set(ReputableStory.usersSwipedUpKey, 0);
+        this.set(ReputableStory.usersClickedVenueKey, 0);
+        this.set(ReputableStory.usersClickedProfileKey, 0);
+        this.set(ReputableStory.avgMomentNumberKey, 0);
+        this.set(ReputableStory.totalViewsKey, 0);
     }
     // Explicit Claims
     incUsersLiked() {
@@ -280,8 +373,10 @@ class ReputableStory extends Parse.Object {
         this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
     }
     calculateStoryScore() {
+        return 100;
     }
 }
+ReputableStory.storyIdKey = "storyId";
 ReputableStory.scoreMetricVerKey = "scoreMetricVer";
 ReputableStory.usersViewedKey = "usersViewed";
 ReputableStory.usersLikedKey = "usersLiked";
