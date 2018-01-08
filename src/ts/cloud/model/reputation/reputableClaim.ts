@@ -1,5 +1,5 @@
 //
-//  reputableClaim.js
+//  reputableClaim.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
@@ -26,8 +26,15 @@ enum StoryActionTypeEnum {
   Profile = 3
 };
 
-
 class ReputableClaim extends Parse.Object {
+
+  sourceId: string;
+  targetId: string;
+  claimType: ReputationClaimTypeEnum;
+  storyClaimType: StoryClaimTypeEnum;
+  storyReactionType: StoryReactionTypeEnum;
+  storyActionType: StoryActionTypeEnum;
+  storyMomentNumber: Number;
 
   constructor() {
     super("ReputableClaim");
@@ -38,7 +45,7 @@ class ReputableClaim extends Parse.Object {
     this.set("targetId", storyId);
     this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
     this.set("storyClaimType", StoryClaimTypeEnum.Reaction);
-    this.set("reactionType", reactionType);
+    this.set("storyReactionType", reactionType);
   }
 
   setAsStoryAction(reporterId: string, storyId: string, actionType: StoryActionTypeEnum) {
@@ -46,7 +53,7 @@ class ReputableClaim extends Parse.Object {
     this.set("targetId", storyId);
     this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
     this.set("storyClaimType", StoryClaimTypeEnum.StoryAction);
-    this.set("actionType", actionType);
+    this.set("storyActionType", actionType);
   }
 
   setAsStoryViewed(reporterId: string, storyId: string, momentNumber: Number) {
@@ -54,7 +61,7 @@ class ReputableClaim extends Parse.Object {
     this.set("targetId", storyId);
     this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
     this.set("storyClaimType", StoryClaimTypeEnum.StoryViewed);
-    this.set("momentNumber", momentNumber);
+    this.set("storyMomentNumber", momentNumber);
   }
 }
 

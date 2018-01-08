@@ -1,5 +1,5 @@
 //
-//  debugConsole.js
+//  debugConsole.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-05
@@ -57,13 +57,13 @@ class DebugConsole {
   }
 
   // MARK: - Public Instance Functions
-  log(severity: SeverityEnum, message: string) {
+  log(severity: SeverityEnum, message: any) {
     if (severity >= this.loggingSeverity) {
       console.log(this.severityHeader(severity) + message);
     }
   }
 
-  error(message: string) {
+  error(message: any) {
     console.error("ERROR:   " + message);
   }
 }

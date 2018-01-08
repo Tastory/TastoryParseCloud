@@ -1,31 +1,35 @@
 {
   "compilerOptions": {
 
-    "target": "ES2015",                       /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'. */
-    "module": "commonjs",                     /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
-    "outDir": "./src/js",                     /* Redirect output structure to the directory. */
+    "target": "ES6",                          /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'. */
+    "module": "amd",                     /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
     "rootDir": "./src/ts",                    /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
+    "outFile": "./src/js/cloud/main.js",            /* Concatenate and emit output to single file. */
+    //"outDir": "./src/js",                        /* Redirect output structure to the directory. */
     "strict": true,                           /* Enable all strict type-checking options. */
-    "types": ["node", "parse"]                /* Type declaration files to be included in compilation. */
+    "types": ["node", "parse"],               /* Type declaration files to be included in compilation. */
+    "noImplicitAny": true,                    /* Raise error on expressions and declarations with an implied 'any' type. */
+    "strictNullChecks": true,                 /* Enable strict null checks. */
+    "strictFunctionTypes": true,              /* Enable strict checking of function types. */
+    "forceConsistentCasingInFileNames": true
 
     /* Basic Options */
-    // "lib": [],                             /* Specify library files to be included in the compilation:  */
+
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
     // "checkJs": true,                       /* Report errors in .js files. */
+
+    // "lib": ["ES6", "DOM"],                    /* Specify library files to be included in the compilation:  */
     // "jsx": "preserve",                     /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */
     // "declaration": true,                   /* Generates corresponding '.d.ts' file. */
     // "sourceMap": true,                     /* Generates corresponding '.map' file. */
-    // "outFile": "./",                       /* Concatenate and emit output to single file. */
+
     // "removeComments": true,                /* Do not emit comments to output. */
-    // "noEmit": true,                        /* Do not emit outputs. */
     // "importHelpers": true,                 /* Import emit helpers from 'tslib'. */
     // "downlevelIteration": true,            /* Provide full support for iterables in 'for-of', spread, and destructuring when targeting 'ES5' or 'ES3'. */
     // "isolatedModules": true,               /* Transpile each file as a separate module (similar to 'ts.transpileModule'). */
+    // "noEmit": true,                        /* Do not emit outputs. */
 
     /* Strict Type-Checking Options */
-    // "noImplicitAny": true,                 /* Raise error on expressions and declarations with an implied 'any' type. */
-    // "strictNullChecks": true,              /* Enable strict null checks. */
-    // "strictFunctionTypes": true,           /* Enable strict checking of function types. */
     // "noImplicitThis": true,                /* Raise error on 'this' expressions with an implied 'any' type. */
     // "alwaysStrict": true,                  /* Parse in strict mode and emit "use strict" for each source file. */
 

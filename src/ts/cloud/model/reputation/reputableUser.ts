@@ -1,5 +1,5 @@
 //
-//  reputableUser.js
+//  reputableUser.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
