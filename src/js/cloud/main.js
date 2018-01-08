@@ -98,11 +98,11 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
 function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts - storySetReactionClaim() executed");
     for (let claim of claimsHistory) {
-        debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.claimType + " StoryClaimType: " + claim.storyClaimType);
+        debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.get("claimType") + " StoryClaimType: " + claim.get("storyClaimType"));
     }
     // Look at the claims history for already set reactions
-    let existingReactions = claimsHistory.filter(claim => (claim.claimType === ReputationClaimTypeEnum.StoryClaim &&
-        claim.storyClaimType === StoryClaimTypeEnum.Reaction));
+    let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
+        claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
     debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
     // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
     let masterKeyOption = { useMasterKey: true };
@@ -122,7 +122,12 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
         });
     }
     else {
-        debugConsole.log(SeverityEnum.Verbose, existingReactions.length + " Reactions found by " + reporterId + " to " + storyId);
+        if (existingReactions.length <= 1) {
+            debugConsole.log(SeverityEnum.Verbose, existingReactions.length + " Reactions found by " + reporterId + " to " + storyId);
+        }
+        else {
+            debugConsole.log(SeverityEnum.Warning, "Unexpected to find " + existingReactions.length + " Reactions by " + reporterId + " to " + storyId);
+        }
         let sameReaction = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
         // Not the same Reaction, clear, set then save a new Reaction
         if (existingReactions.length != 1 || sameReaction.length != 0) {
@@ -225,7 +230,66 @@ class ReputableStory extends Parse.Object {
     constructor() {
         super("ReputableStory");
     }
+    initializeRollUp(scoreMetricVer) {
+        this.set("scoreMetricVer", scoreMetricVer);
+        this.set("usersViewed", 0);
+        this.set("usersLiked", 0);
+        this.set("usersSwipedUp", 0);
+        this.set("usersClickedVenue", 0);
+        this.set("usersClickedProfile", 0);
+        this.set("avgMomentNumber", 0);
+        this.set("totalViews", 0);
+    }
+    // Explicit Claims
+    incUsersLiked() {
+        let usersLiked = this.get(ReputableStory.usersLikedKey) + 1;
+        this.set(ReputableStory.usersLikedKey, usersLiked);
+    }
+    decUsersLiked() {
+        let usersLiked = this.get(ReputableStory.usersLikedKey) - 1;
+        this.set(ReputableStory.usersLikedKey, usersLiked);
+    }
+    // Implicit Claims
+    incUsersSwipedUp() {
+        let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
+        this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp);
+    }
+    incUsersClickedVenue() {
+        let usersClickedVenue = this.get(ReputableStory.usersClickedVenueKey) + 1;
+        this.set(ReputableStory.usersClickedVenueKey, usersClickedVenue);
+    }
+    thisUsersClickedProfile() {
+        let usersClickedProfile = this.get(ReputableStory.usersClickedProfileKey) + 1;
+        this.set(ReputableStory.usersClickedProfileKey, usersClickedProfile);
+    }
+    // View Counts
+    incUsersViewed() {
+        let usersViewed = this.get(ReputableStory.usersViewedKey) + 1;
+        this.set(ReputableStory.usersViewedKey, usersViewed);
+    }
+    incTotalViewed() {
+        let totalViews = this.get(ReputableStory.totalViewsKey) + 1;
+        this.set(ReputableStory.totalViewsKey, totalViews);
+    }
+    recalAvgMomentNumber(prevMomentNumber, newMomentNumber) {
+        let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
+        let usersViewed = this.get(ReputableStory.usersViewedKey);
+        let totalMomentNumber = avgMomentNumber * usersViewed;
+        totalMomentNumber = totalMomentNumber - prevMomentNumber + newMomentNumber;
+        avgMomentNumber = totalMomentNumber / usersViewed;
+        this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+    }
+    calculateStoryScore() {
+    }
 }
+ReputableStory.scoreMetricVerKey = "scoreMetricVer";
+ReputableStory.usersViewedKey = "usersViewed";
+ReputableStory.usersLikedKey = "usersLiked";
+ReputableStory.usersSwipedUpKey = "usersSwipedUp";
+ReputableStory.usersClickedVenueKey = "usersClickedVenue";
+ReputableStory.usersClickedProfileKey = "usersClickedProfile";
+ReputableStory.avgMomentNumberKey = "avgMomentNumber";
+ReputableStory.totalViewsKey = "totalViews";
 Parse.Object.registerSubclass("ReputableStory", ReputableStory);
 //
 //  reputableUser.ts
@@ -240,6 +304,45 @@ class ReputableUser extends Parse.Object {
     }
 }
 Parse.Object.registerSubclass("ReputableUser", ReputableUser);
+//
+//  scoreStoryMetric.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+class ScoreStoryMetric {
+    constructor(baseScore, percentageLikeWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageProfileClickedWeighting, percetnageVenueClickedWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentInverseConstant, usersViewedLogConstant) {
+        this.baseScore = baseScore;
+        this.percentageLikeWeighting = percentageLikeWeighting;
+        this.avgMomentWeighting = avgMomentWeighting;
+        this.usersViewedWeighting = usersViewedWeighting;
+        this.percentageSwipedWeighting = percentageSwipedWeighting;
+        this.percentageProfileClickedWeighting = percentageProfileClickedWeighting;
+        this.percetnageVenueClickedWeighting = percetnageVenueClickedWeighting;
+        this.newnessFactor = newnessFactor;
+        this.newnessHalfLife = newnessHalfLife;
+        this.decayHalfLife = decayHalfLife;
+        this.avgMomentInverseConstant = avgMomentInverseConstant;
+        this.usersViewedLogConstant = usersViewedLogConstant;
+    }
+}
+ScoreStoryMetric.scoreMetricVer = [
+    // Story Scoring Metric ver. 1
+    new ScoreStoryMetric(10, // baseScore: number;
+    40, // percentageLikeWeighting: number;
+    30, // avgMomentWeighting: number;
+    30, // usersViewedWeighting: number;
+    20, // percentageSwipedWeighting: number;
+    10, // percentageProfileClickedWeighting: number;
+    10, // percetnageVenueClickedWeighting: number;
+    0.9, // newnessFactor: number;
+    1.0, // newnessHalfLife: number; (in days)
+    120, // decayHalfLife: number; (in days)
+    0.3, // avgMomentInverseConstant: number;
+    20) // usersViewedLogConstant: number;
+    // More Story Scoring Metrics...
+];
 //
 //  debugConsole.ts
 //  TastoryParseCloud

@@ -105,12 +105,12 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
   debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts - storySetReactionClaim() executed");
 
   for (let claim of claimsHistory) {
-    debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.claimType + " StoryClaimType: " + claim.storyClaimType);
+    debugConsole.log(SeverityEnum.Verbose, "Claim Type: " + claim.get("claimType") + " StoryClaimType: " + claim.get("storyClaimType"));
   }
 
   // Look at the claims history for already set reactions
-  let existingReactions = claimsHistory.filter(claim => (claim.claimType === ReputationClaimTypeEnum.StoryClaim &&
-                                                         claim.storyClaimType === StoryClaimTypeEnum.Reaction));
+  let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
+                                                         claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
 
   debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
 
@@ -137,7 +137,11 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
 
   // Previous Reactions found
   else {
-    debugConsole.log(SeverityEnum.Verbose, existingReactions.length + " Reactions found by " + reporterId + " to " + storyId);
+    if (existingReactions.length <= 1) {
+      debugConsole.log(SeverityEnum.Verbose, existingReactions.length + " Reactions found by " + reporterId + " to " + storyId);
+    } else {
+      debugConsole.log(SeverityEnum.Warning, "Unexpected to find " + existingReactions.length + " Reactions by " + reporterId + " to " + storyId);
+    }
     let sameReaction = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
 
     // Not the same Reaction, clear, set then save a new Reaction
@@ -172,6 +176,8 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
 
 function storyClearReactionClaim(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
   debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyClearReactionClaim.name + "() executed");
+
+
 }
 
 

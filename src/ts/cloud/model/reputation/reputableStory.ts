@@ -8,46 +8,80 @@
 
 class ReputableStory extends Parse.Object {
 
-  private scoreMetricVer: number;
-  private usersViewed: number;
-  private usersLiked: number;
-  private usersSwipedUp: number;
-  private usersClickedVenue: number;
-  private usersClickedProfile: number;
-  private avgMomentNumber: number;
-  private totalViews: number;
+  private static scoreMetricVerKey: string = "scoreMetricVer";
+  private static usersViewedKey: string = "usersViewed";
+  private static usersLikedKey: string = "usersLiked";
+  private static usersSwipedUpKey: string = "usersSwipedUp";
+  private static usersClickedVenueKey: string = "usersClickedVenue";
+  private static usersClickedProfileKey: string = "usersClickedProfile";
+  private static avgMomentNumberKey: string = "avgMomentNumber";
+  private static totalViewsKey: string = "totalViews";
 
   constructor() {
     super("ReputableStory");
   }
 
   initializeRollUp(scoreMetricVer: number) {
-    this.scoreMetricVer = scoreMetricVer;
-    this.usersViewed = 0;
-    this.usersLiked = 0;
-    this.usersSwipedUp = 0;
-    this.usersClickedVenue = 0;
-    this.usersClickedProfile = 0;
-    this.avgMomentNumber = 0;
-    this.totalViews = 0;
+    this.set("scoreMetricVer", scoreMetricVer);
+    this.set("usersViewed", 0);
+    this.set("usersLiked", 0);
+    this.set("usersSwipedUp", 0);
+    this.set("usersClickedVenue", 0);
+    this.set("usersClickedProfile", 0);
+    this.set("avgMomentNumber", 0);
+    this.set("totalViews", 0);
   }
 
   // Explicit Claims
-  incUsersLiked() { this.usersLiked++; }
-  decUsersLiked() { this.usersLiked--; }
+  incUsersLiked() {
+    let usersLiked = this.get(ReputableStory.usersLikedKey) + 1;
+    this.set(ReputableStory.usersLikedKey, usersLiked);
+  }
+
+  decUsersLiked() {
+    let usersLiked = this.get(ReputableStory.usersLikedKey) - 1;
+    this.set(ReputableStory.usersLikedKey, usersLiked);
+  }
 
   // Implicit Claims
-  incUsersSwipedUp() { this.usersSwipedUp++; }
-  incUsersClickedVenue() { this.usersClickedVenue++; }
-  thisUsersClickedProfile() { this.usersClickedProfile++; }
+  incUsersSwipedUp() {
+    let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
+    this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp)
+  }
+
+  incUsersClickedVenue() {
+    let usersClickedVenue = this.get(ReputableStory.usersClickedVenueKey) + 1;
+    this.set(ReputableStory.usersClickedVenueKey, usersClickedVenue);
+  }
+
+  thisUsersClickedProfile() {
+    let usersClickedProfile = this.get(ReputableStory.usersClickedProfileKey) +1;
+    this.set(ReputableStory.usersClickedProfileKey, usersClickedProfile);
+  }
 
   // View Counts
-  incUsersViewed() { this.usersViewed++; }
-  incTotalViewed() { this.totalViews++; }
+  incUsersViewed() {
+    let usersViewed = this.get(ReputableStory.usersViewedKey) + 1;
+    this.set(ReputableStory.usersViewedKey, usersViewed);
+  }
+
+  incTotalViewed() {
+    let totalViews =  this.get(ReputableStory.totalViewsKey) + 1;
+    this.set(ReputableStory.totalViewsKey, totalViews);
+  }
+
   recalAvgMomentNumber(prevMomentNumber: number, newMomentNumber: number) {
-    let totalMomentNumber = this.avgMomentNumber * this.usersViewed;
+    let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
+    let usersViewed = this.get(ReputableStory.usersViewedKey);
+    let totalMomentNumber = avgMomentNumber * usersViewed;
+
     totalMomentNumber = totalMomentNumber - prevMomentNumber + newMomentNumber;
-    this.avgMomentNumber = totalMomentNumber / this.usersViewed;
+    avgMomentNumber = totalMomentNumber / usersViewed;
+    this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+  }
+
+  calculateStoryScore() {
+
   }
 }
 

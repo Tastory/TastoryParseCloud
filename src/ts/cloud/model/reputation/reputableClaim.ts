@@ -28,14 +28,6 @@ enum StoryActionTypeEnum {
 
 class ReputableClaim extends Parse.Object {
 
-  sourceId: string;
-  targetId: string;
-  claimType: ReputationClaimTypeEnum;
-  storyClaimType: StoryClaimTypeEnum;
-  storyReactionType: StoryReactionTypeEnum;
-  storyActionType: StoryActionTypeEnum;
-  storyMomentNumber: Number;
-
   constructor() {
     super("ReputableClaim");
   }
