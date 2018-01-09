@@ -80,9 +80,9 @@ class ReputableStory extends Parse.Object {
       return story.save(null, masterKeyOption);
 
     }).then(
-      function(reputableStory) {
+      function(story) {
         debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success")
-        callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
+        callback(story.get(FoodieStory.reputationKey), "Parse Like for Story ID: " + storyId + " success");
       },
 
       function(error) {
@@ -94,7 +94,7 @@ class ReputableStory extends Parse.Object {
 
 
   static decUsersLikedFor(storyId: string, callback: AnyErrorMsgFunction) {
-    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
+    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts decUsersLikedFor() " + storyId + " executed");
 
     ReputableStory.getStoryWithLog(storyId).then(function(reputation) {
       reputation.decUsersLiked();
@@ -111,14 +111,14 @@ class ReputableStory extends Parse.Object {
       return story.save(null, masterKeyOption);
 
     }).then(
-      function(reputableStory) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success")
-        callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
+      function(story) {
+        debugConsole.log(SeverityEnum.Verbose, "Parse Clear Like for Story ID: " + storyId + " success")
+        callback(story.get(FoodieStory.reputationKey), "Parse Clear Like for Story ID: " + storyId + " success");
       },
 
       function(error) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
-        callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        debugConsole.log(SeverityEnum.Verbose, "Parse Clear Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        callback(null, "Parse Clear Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
       }
     );
   }

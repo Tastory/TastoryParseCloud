@@ -26,34 +26,45 @@ enum StoryActionTypeEnum {
   Profile = 3
 };
 
+
 class ReputableClaim extends Parse.Object {
+
+  static sourceIdKey: string = "sourceId";
+  static targetIdKey: string = "targetId";
+  static claimTypeKey: string = "claimType";
+
+  // For Story Reputation Claims
+  static storyClaimTypeKey: string = "storyClaimType";
+  static storyReactionTypeKey: string = "storyReactionType";
+  static storyActionTypeKey: string = "storyActionType";
+  static storyMomentNumberKey: string = "storyMomentNumber";
 
   constructor() {
     super("ReputableClaim");
   }
 
   setAsStoryReaction(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum) {
-    this.set("sourceId", reporterId);
-    this.set("targetId", storyId);
-    this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
-    this.set("storyClaimType", StoryClaimTypeEnum.Reaction);
-    this.set("storyReactionType", reactionType);
+    this.set(ReputableClaim.sourceIdKey, reporterId);
+    this.set(ReputableClaim.targetIdKey, storyId);
+    this.set(ReputableClaim.claimTypeKey, ReputationClaimTypeEnum.StoryClaim);
+    this.set(ReputableClaim.storyClaimTypeKey, StoryClaimTypeEnum.Reaction);
+    this.set(ReputableClaim.storyReactionTypeKey, reactionType);
   }
 
   setAsStoryAction(reporterId: string, storyId: string, actionType: StoryActionTypeEnum) {
-    this.set("sourceId", reporterId);
-    this.set("targetId", storyId);
-    this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
-    this.set("storyClaimType", StoryClaimTypeEnum.StoryAction);
-    this.set("storyActionType", actionType);
+    this.set(ReputableClaim.sourceIdKey, reporterId);
+    this.set(ReputableClaim.targetIdKey, storyId);
+    this.set(ReputableClaim.claimTypeKey, ReputationClaimTypeEnum.StoryClaim);
+    this.set(ReputableClaim.storyClaimTypeKey, StoryClaimTypeEnum.StoryAction);
+    this.set(ReputableClaim.storyActionTypeKey, actionType);
   }
 
   setAsStoryViewed(reporterId: string, storyId: string, momentNumber: Number) {
-    this.set("sourceId", reporterId);
-    this.set("targetId", storyId);
-    this.set("claimType", ReputationClaimTypeEnum.StoryClaim);
-    this.set("storyClaimType", StoryClaimTypeEnum.StoryViewed);
-    this.set("storyMomentNumber", momentNumber);
+    this.set(ReputableClaim.sourceIdKey, reporterId);
+    this.set(ReputableClaim.targetIdKey, storyId);
+    this.set(ReputableClaim.claimTypeKey, ReputationClaimTypeEnum.StoryClaim);
+    this.set(ReputableClaim.storyClaimTypeKey, StoryClaimTypeEnum.StoryViewed);
+    this.set(ReputableClaim.storyMomentNumberKey, momentNumber);
   }
 }
 
