@@ -6,6 +6,8 @@
 //  Copyright © 2018 Tastry. All rights reserved.
 //
 
-type AnyErrorMsgFunction = (anyArg: any, errorMsg: string) => void
+type AnyErrorMsgFunction = (anyArg: any, errorMsg: string) => void;
+
+const masterKeyOption: Parse.UseMasterKeyOption = { useMasterKey: true };
 
 var reputationScoreStoryMetricVer: number = 1;

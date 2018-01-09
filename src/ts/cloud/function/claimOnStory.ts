@@ -49,9 +49,17 @@ Parse.Cloud.define("storyClaim", function(req, res) {
 function claimInputForStory(reporterId: string, storyId: string, claimParameters: any, callback: AnyErrorMsgFunction) {
   debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + claimInputForStory.name + "() executed");
 
+  debugConsole.log(SeverityEnum.Debug, "Story Reputation Claim Input" +
+                                       "\nSource ID: " + reporterId +
+                                       "\nTarget ID: " + storyId +
+                                       "\nStory Claim Type: " + claimParameters.storyClaimType +
+                                       "\nSet or Clear: " + claimParameters.setNotClear +
+                                       "\nReaction Type: " + claimParameters.reactionType +
+                                       "\nAction Type: " + claimParameters.actionType +
+                                       "\nMoment Number: " + claimParameters.momentNumber);
+
   // To understand what action needs to be taken for the new claim inputClaimOnStory
   // We have to first query the ReputableClaim database
-  // let ReputableClaim = Parse.Object.extend("ReputableClaim");
   let query = new Parse.Query(ReputableClaim);
   query.equalTo("sourceId", reporterId);
   query.equalTo("targetId", storyId);
@@ -63,14 +71,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       // Determine the exact claim scenario, then extract the relevant
       // parameters and supply it into the next claim processing function
 
-      debugConsole.log(SeverityEnum.Debug, "Story Reputation Claim Input" +
-                                           "\nSource ID: " + reporterId +
-                                           "\nTarget ID: " + storyId +
-                                           "\nStory Claim Type: " + claimParameters.storyClaimType +
-                                           "\nSet or Clear: " + claimParameters.setNotClear +
-                                           "\nReaction Type: " + claimParameters.reactionType +
-                                           "\nAction Type: " + claimParameters.actionType +
-                                           "\nMoment Number: " + claimParameters.momentNumber);
+
 
       switch (claimParameters.storyClaimType) {
         case StoryClaimTypeEnum.Reaction:
@@ -110,14 +111,11 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
 
   debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
 
-  // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
-  let masterKeyOption: Parse.UseMasterKeyOption = { useMasterKey: true };
-
   // No previous Reactions found, just set and save a new Reaction
   if (existingReactions.length === 0) {
     let storyReactionClaim = new ReputableClaim();
     storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
-    debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + "saving a new Story Reaction Claim");
+    debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + " saving a new Story Reaction Claim");
 
     storyReactionClaim.save(null, masterKeyOption).then(
       function(object) {
@@ -163,7 +161,7 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
     // Exiting Reaction matches the Desired Reaction
     } else {
       // TODO: For now, just log and returned. Also note returned object isn't even correct
-      debugConsole.log(SeverityEnum.Verbose, "Desired Reaction state already exist. Calling back for now");
+      debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
       callback(null, "Desired Reaction state already exist. Success");
     }
   }
@@ -178,9 +176,6 @@ function storyClearReactionClaim(reporterId: string, storyId: string, reactionTy
                                                          claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
 
   debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
-
-  // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
-  let masterKeyOption: Parse.UseMasterKeyOption = { useMasterKey: true };
 
   // Why is the client even asking for a clear then?
   if (existingReactions.length === 0) {

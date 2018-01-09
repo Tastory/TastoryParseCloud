@@ -14,6 +14,7 @@ console.log("Tastory Parse Cloud Code main.js Running");
 //  Created by Howard Lee on 2018-01-05
 //  Copyright © 2018 Tastry. All rights reserved.
 //
+const masterKeyOption = { useMasterKey: true };
 var reputationScoreStoryMetricVer = 1;
 //
 //  claimOnStory.ts
@@ -102,13 +103,11 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
     let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
         claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
     debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
-    // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
-    let masterKeyOption = { useMasterKey: true };
     // No previous Reactions found, just set and save a new Reaction
     if (existingReactions.length === 0) {
         let storyReactionClaim = new ReputableClaim();
         storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
-        debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + "saving a new Story Reaction Claim");
+        debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + " saving a new Story Reaction Claim");
         storyReactionClaim.save(null, masterKeyOption).then(function (object) {
             ReputableStory.incUsersLikedFor(storyId, callback);
         }, function (error) {
@@ -141,7 +140,7 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
         }
         else {
             // TODO: For now, just log and returned. Also note returned object isn't even correct
-            debugConsole.log(SeverityEnum.Verbose, "Desired Reaction state already exist. Calling back for now");
+            debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
             callback(null, "Desired Reaction state already exist. Success");
         }
     }
@@ -152,8 +151,6 @@ function storyClearReactionClaim(reporterId, storyId, reactionType, claimsHistor
     let existingReactions = claimsHistory.filter(claim => (claim.get("claimType") === ReputationClaimTypeEnum.StoryClaim &&
         claim.get("storyClaimType") === StoryClaimTypeEnum.Reaction));
     debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
-    // Do all operations against Parse via Master key. As the ReputableClaim class is restricted
-    let masterKeyOption = { useMasterKey: true };
     // Why is the client even asking for a clear then?
     if (existingReactions.length === 0) {
         debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction not found at storyClearReactionClaim()");
@@ -190,6 +187,8 @@ class FoodieStory extends Parse.Object {
         super("FoodieStory");
     }
 }
+FoodieStory.reputationKey = "reputation";
+FoodieStory.discoverabilityKey = "discoverability";
 Parse.Object.registerSubclass("FoodieStory", FoodieStory);
 //
 //  reputableClaim.ts
@@ -263,24 +262,23 @@ class ReputableStory extends Parse.Object {
     static getStoryWithLog(storyId) {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
         let promise = new Parse.Promise();
-        let query = new Parse.Query(ReputableStory);
-        query.equalTo("storyId", storyId);
-        query.find().then(function (results) {
+        let query = new Parse.Query(FoodieStory);
+        query.include(FoodieStory.reputationKey);
+        query.get(storyId).then(function (story) {
             let reputableStory;
-            if (!results || results.length === 0) {
+            if (!story.get(FoodieStory.reputationKey)) {
                 reputableStory = new ReputableStory();
-                reputableStory.initializeReputation(storyId, reputationScoreStoryMetricVer);
-                debugConsole.log(SeverityEnum.Debug, "New Reputation created for storyId " + storyId);
+                reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
             }
             else {
-                let result = results[0];
-                if (results.length > 1) {
-                    debugConsole.log(SeverityEnum.Warning, results.length + " reputations for storyId " + storyId + " found");
-                }
-                result.debugConsoleLog(SeverityEnum.Verbose);
-                reputableStory = result;
+                reputableStory = story.get(FoodieStory.reputationKey);
+                reputableStory.debugConsoleLog(SeverityEnum.Verbose);
             }
-            promise.resolve(reputableStory);
+            return reputableStory.save(null, masterKeyOption);
+        }).then(function (reputation) {
+            let story = reputation.get(ReputableStory.storyKey);
+            story.set(FoodieStory.reputationKey, reputation);
+            promise.resolve(reputation);
         }, function (error) {
             promise.reject(error);
         });
@@ -288,22 +286,17 @@ class ReputableStory extends Parse.Object {
     }
     static incUsersLikedFor(storyId, callback) {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
-        let masterKeyOption = { useMasterKey: true };
-        let reputableStory;
-        let discoverabilityScore;
-        ReputableStory.getStoryWithLog(storyId).then(function (result) {
-            result.incUsersLiked();
-            return result.save(null, masterKeyOption);
-        }).then(function (result) {
-            reputableStory = result;
-            discoverabilityScore = result.calculateStoryScore();
-            let query = new Parse.Query(FoodieStory);
-            return query.get(storyId);
-        }).then(function (foodieStory) {
-            foodieStory.set("discoverability", discoverabilityScore);
-            foodieStory.set("reputation", reputableStory.get("objectId"));
-            return foodieStory.save(null, masterKeyOption);
-        }).then(function (foodieStory) {
+        ReputableStory.getStoryWithLog(storyId).then(function (reputation) {
+            reputation.incUsersLiked();
+            let story = reputation.get(ReputableStory.storyKey);
+            if (!story) {
+                debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!");
+            }
+            else {
+                story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+            }
+            return reputation.save(null, masterKeyOption);
+        }).then(function (reputableStory) {
             debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success");
             callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
         }, function (error) {
@@ -311,19 +304,9 @@ class ReputableStory extends Parse.Object {
             callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
         });
     }
-    debugConsoleLog(severity) {
-        debugConsole.log(severity, "ReputableStory ID: " + this.get("objectId") +
-            "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
-            "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
-            "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
-            "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
-            "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
-            "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
-            "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
-            "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
-    }
-    initializeReputation(storyId, scoreMetricVer) {
-        this.set(ReputableStory.storyIdKey, storyId);
+    initializeReputation(story, scoreMetricVer) {
+        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
+        this.set(ReputableStory.storyKey, story);
         this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
         this.set(ReputableStory.usersViewedKey, 0);
         this.set(ReputableStory.usersLikedKey, 0);
@@ -332,6 +315,17 @@ class ReputableStory extends Parse.Object {
         this.set(ReputableStory.usersClickedProfileKey, 0);
         this.set(ReputableStory.avgMomentNumberKey, 0);
         this.set(ReputableStory.totalViewsKey, 0);
+    }
+    debugConsoleLog(severity) {
+        debugConsole.log(severity, "ReputableStory ID: " + this.id +
+            "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
+            "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
+            "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
+            "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
+            "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
+            "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
+            "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
+            "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
     }
     // Explicit Claims
     incUsersLiked() {
@@ -376,7 +370,7 @@ class ReputableStory extends Parse.Object {
         return 100;
     }
 }
-ReputableStory.storyIdKey = "storyId";
+ReputableStory.storyKey = "story";
 ReputableStory.scoreMetricVerKey = "scoreMetricVer";
 ReputableStory.usersViewedKey = "usersViewed";
 ReputableStory.usersLikedKey = "usersLiked";

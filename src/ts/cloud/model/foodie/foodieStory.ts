@@ -8,6 +8,9 @@
 
 class FoodieStory extends Parse.Object {
 
+  static reputationKey: string = "reputation";
+  static discoverabilityKey: string = "discoverability";
+
   constructor() {
     super("FoodieStory");
   }
