@@ -3,6 +3,9 @@
     "Tastory:Dev:Howard": {
       "applicationId": "L9lKtiKM6p7tltl32yfKs2ILLEJrnGpo1hwevYck"
     },
+    "Tastory:Reputation:Dev": {
+      "applicationId": "gYVhxaSgAX5RwWDHGi4uVONgJTl0XlCSwreL4N0y"
+    },
     "_default": {
       "link": "Tastory:Dev:Howard"
     }
