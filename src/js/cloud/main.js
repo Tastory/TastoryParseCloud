@@ -46,7 +46,7 @@ Parse.Cloud.define("storyClaim", function (req, res) {
     let reporterId = user.id;
     // Process the claim input
     claimInputForStory(reporterId, storyId, req.params, function (anyArg, errorMsg) {
-        if (!errorMsg) {
+        if (!anyArg) {
             debugConsole.log(SeverityEnum.Warning, "errorMsg");
             res.error(errorMsg);
         }
@@ -138,9 +138,13 @@ function storySetReactionClaim(reporterId, storyId, reactionType, claimsHistory,
             // Exiting Reaction matches the Desired Reaction
         }
         else {
-            // TODO: For now, just log and returned. Also note returned object isn't even correct
-            debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
-            callback(null, "Desired Reaction state already exist. Success");
+            ReputableStory.getStoryWithLog(storyId).then(function (reputation) {
+                debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
+                callback(reputation, "Desired Reaction state already exist. Success");
+            }, function (error) {
+                debugConsole.log(SeverityEnum.Warning, "Cannot even find StoryReputation at storyClearReactionClaim()");
+                callback(null, "Cannot even find StoryReputation at storyClearReactionClaim()");
+            });
         }
     }
 }
@@ -152,8 +156,13 @@ function storyClearReactionClaim(reporterId, storyId, reactionType, claimsHistor
     debugConsole.log(SeverityEnum.Debug, "StoyReaction filter resulted in " + existingReactions.length + " matches");
     // Why is the client even asking for a clear then?
     if (existingReactions.length === 0) {
-        debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction not found at storyClearReactionClaim()");
-        callback(null, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+        ReputableStory.getStoryWithLog(storyId).then(function (reputation) {
+            debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
+            callback(reputation, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
+        }, function (error) {
+            debugConsole.log(SeverityEnum.Warning, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
+            callback(null, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
+        });
     }
     else {
         let sameReactions = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
@@ -256,8 +265,6 @@ class ReputableStory extends Parse.Object {
     constructor() {
         super("ReputableStory");
     }
-    static saveReputationAndDiscoverability() {
-    }
     static getStoryWithLog(storyId) {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
         let promise = new Parse.Promise();
@@ -277,7 +284,6 @@ class ReputableStory extends Parse.Object {
             reputableStory.story = story;
             return reputableStory.save(null, masterKeyOption);
         }).then(function (reputation) {
-            reputableStory.story.set(FoodieStory.reputationKey, reputation);
             promise.resolve(reputation);
         }, function (error) {
             promise.reject(error);
@@ -297,6 +303,30 @@ class ReputableStory extends Parse.Object {
             else {
                 story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
             }
+            story.set(FoodieStory.reputationKey, reputation);
+            return story.save(null, masterKeyOption);
+        }).then(function (reputableStory) {
+            debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success");
+            callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
+        }, function (error) {
+            debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+            callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        });
+    }
+    static decUsersLikedFor(storyId, callback) {
+        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
+        ReputableStory.getStoryWithLog(storyId).then(function (reputation) {
+            reputation.decUsersLiked();
+            return reputation.save(null, masterKeyOption);
+        }).then(function (reputation) {
+            let story = reputation.story;
+            if (!story) {
+                debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!");
+            }
+            else {
+                story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+            }
+            story.set(FoodieStory.reputationKey, reputation);
             return story.save(null, masterKeyOption);
         }).then(function (reputableStory) {
             debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success");

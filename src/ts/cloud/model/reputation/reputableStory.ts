@@ -26,10 +26,6 @@ class ReputableStory extends Parse.Object {
   }
 
 
-  private static saveReputationAndDiscoverability() {
-
-  }
-
   static getStoryWithLog(storyId: string): Parse.Promise<ReputableStory> {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
 
@@ -54,7 +50,6 @@ class ReputableStory extends Parse.Object {
 
     }).then(
       function(reputation) {
-        reputableStory.story.set(FoodieStory.reputationKey, reputation);
         promise.resolve(reputation);
       },
 
@@ -81,6 +76,38 @@ class ReputableStory extends Parse.Object {
       } else {
         story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
       }
+      story.set(FoodieStory.reputationKey, reputation);
+      return story.save(null, masterKeyOption);
+
+    }).then(
+      function(reputableStory) {
+        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success")
+        callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
+      },
+
+      function(error) {
+        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+        callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
+      }
+    );
+  }
+
+
+  static decUsersLikedFor(storyId: string, callback: AnyErrorMsgFunction) {
+    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
+
+    ReputableStory.getStoryWithLog(storyId).then(function(reputation) {
+      reputation.decUsersLiked();
+      return reputation.save(null, masterKeyOption);
+
+    }).then(function(reputation) {
+      let story = reputation.story;
+      if (!story) {
+        debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!")
+      } else {
+        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+      }
+      story.set(FoodieStory.reputationKey, reputation);
       return story.save(null, masterKeyOption);
 
     }).then(

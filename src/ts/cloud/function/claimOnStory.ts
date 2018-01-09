@@ -34,7 +34,7 @@ Parse.Cloud.define("storyClaim", function(req, res) {
 
   // Process the claim input
   claimInputForStory(reporterId, storyId, req.params, function(anyArg: any, errorMsg: string) {
-    if (!errorMsg) {
+    if (!anyArg) {
       debugConsole.log(SeverityEnum.Warning, "errorMsg");
       res.error(errorMsg);
 
@@ -70,8 +70,6 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
       // Determine the exact claim scenario, then extract the relevant
       // parameters and supply it into the next claim processing function
-
-
 
       switch (claimParameters.storyClaimType) {
         case StoryClaimTypeEnum.Reaction:
@@ -160,9 +158,16 @@ function storySetReactionClaim(reporterId: string, storyId: string, reactionType
 
     // Exiting Reaction matches the Desired Reaction
     } else {
-      // TODO: For now, just log and returned. Also note returned object isn't even correct
-      debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
-      callback(null, "Desired Reaction state already exist. Success");
+      ReputableStory.getStoryWithLog(storyId).then(
+        function(reputation) {
+          debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
+          callback(reputation, "Desired Reaction state already exist. Success");
+        },
+        function(error) {
+          debugConsole.log(SeverityEnum.Warning, "Cannot even find StoryReputation at storyClearReactionClaim()");
+          callback(null, "Cannot even find StoryReputation at storyClearReactionClaim()");
+        }
+      );
     }
   }
 }
@@ -179,8 +184,16 @@ function storyClearReactionClaim(reporterId: string, storyId: string, reactionTy
 
   // Why is the client even asking for a clear then?
   if (existingReactions.length === 0) {
-    debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction not found at storyClearReactionClaim()");
-    callback(null, "Parse clear Story Reaction not found at storyClearReactionClaim()");
+    ReputableStory.getStoryWithLog(storyId).then(
+      function(reputation) {
+        debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
+        callback(reputation, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
+      },
+      function(error) {
+        debugConsole.log(SeverityEnum.Warning, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
+        callback(null, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
+      }
+    );
 
   } else {
     let sameReactions = existingReactions.filter(reaction => (reaction.get("reactionType") === reactionType));
