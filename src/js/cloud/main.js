@@ -58,9 +58,16 @@ Parse.Cloud.define("storyClaim", function (req, res) {
 });
 function claimInputForStory(reporterId, storyId, claimParameters, callback) {
     debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + claimInputForStory.name + "() executed");
+    debugConsole.log(SeverityEnum.Debug, "Story Reputation Claim Input" +
+        "\nSource ID: " + reporterId +
+        "\nTarget ID: " + storyId +
+        "\nStory Claim Type: " + claimParameters.storyClaimType +
+        "\nSet or Clear: " + claimParameters.setNotClear +
+        "\nReaction Type: " + claimParameters.reactionType +
+        "\nAction Type: " + claimParameters.actionType +
+        "\nMoment Number: " + claimParameters.momentNumber);
     // To understand what action needs to be taken for the new claim inputClaimOnStory
     // We have to first query the ReputableClaim database
-    // let ReputableClaim = Parse.Object.extend("ReputableClaim");
     let query = new Parse.Query(ReputableClaim);
     query.equalTo("sourceId", reporterId);
     query.equalTo("targetId", storyId);
@@ -68,14 +75,6 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
         debugConsole.log(SeverityEnum.Debug, "ReputableClaim query resulted in " + results.length + " matches");
         // Determine the exact claim scenario, then extract the relevant
         // parameters and supply it into the next claim processing function
-        debugConsole.log(SeverityEnum.Debug, "Story Reputation Claim Input" +
-            "\nSource ID: " + reporterId +
-            "\nTarget ID: " + storyId +
-            "\nStory Claim Type: " + claimParameters.storyClaimType +
-            "\nSet or Clear: " + claimParameters.setNotClear +
-            "\nReaction Type: " + claimParameters.reactionType +
-            "\nAction Type: " + claimParameters.actionType +
-            "\nMoment Number: " + claimParameters.momentNumber);
         switch (claimParameters.storyClaimType) {
             case StoryClaimTypeEnum.Reaction:
                 if (claimParameters.setNotClear) {
@@ -262,10 +261,11 @@ class ReputableStory extends Parse.Object {
     static getStoryWithLog(storyId) {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
         let promise = new Parse.Promise();
+        let reputableStory;
+        let foodieStory;
         let query = new Parse.Query(FoodieStory);
         query.include(FoodieStory.reputationKey);
         query.get(storyId).then(function (story) {
-            let reputableStory;
             if (!story.get(FoodieStory.reputationKey)) {
                 reputableStory = new ReputableStory();
                 reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
@@ -274,10 +274,10 @@ class ReputableStory extends Parse.Object {
                 reputableStory = story.get(FoodieStory.reputationKey);
                 reputableStory.debugConsoleLog(SeverityEnum.Verbose);
             }
+            reputableStory.story = story;
             return reputableStory.save(null, masterKeyOption);
         }).then(function (reputation) {
-            let story = reputation.get(ReputableStory.storyKey);
-            story.set(FoodieStory.reputationKey, reputation);
+            reputableStory.story.set(FoodieStory.reputationKey, reputation);
             promise.resolve(reputation);
         }, function (error) {
             promise.reject(error);
@@ -288,14 +288,16 @@ class ReputableStory extends Parse.Object {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
         ReputableStory.getStoryWithLog(storyId).then(function (reputation) {
             reputation.incUsersLiked();
-            let story = reputation.get(ReputableStory.storyKey);
+            return reputation.save(null, masterKeyOption);
+        }).then(function (reputation) {
+            let story = reputation.story;
             if (!story) {
                 debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!");
             }
             else {
                 story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
             }
-            return reputation.save(null, masterKeyOption);
+            return story.save(null, masterKeyOption);
         }).then(function (reputableStory) {
             debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success");
             callback(reputableStory, "Parse Like for Story ID: " + storyId + " success");
@@ -306,7 +308,7 @@ class ReputableStory extends Parse.Object {
     }
     initializeReputation(story, scoreMetricVer) {
         debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
-        this.set(ReputableStory.storyKey, story);
+        this.set(ReputableStory.storyIdKey, story.id);
         this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
         this.set(ReputableStory.usersViewedKey, 0);
         this.set(ReputableStory.usersLikedKey, 0);
@@ -370,7 +372,7 @@ class ReputableStory extends Parse.Object {
         return 100;
     }
 }
-ReputableStory.storyKey = "story";
+ReputableStory.storyIdKey = "storyId";
 ReputableStory.scoreMetricVerKey = "scoreMetricVer";
 ReputableStory.usersViewedKey = "usersViewed";
 ReputableStory.usersLikedKey = "usersLiked";

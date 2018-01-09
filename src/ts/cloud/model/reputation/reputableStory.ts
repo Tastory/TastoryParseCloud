@@ -8,7 +8,7 @@
 
 class ReputableStory extends Parse.Object {
 
-  private static storyKey: string = "story";
+  private static storyIdKey: string = "storyId";
   private static scoreMetricVerKey: string = "scoreMetricVer";
   private static usersViewedKey: string = "usersViewed";
   private static usersLikedKey: string = "usersLiked";
@@ -17,6 +17,8 @@ class ReputableStory extends Parse.Object {
   private static usersClickedProfileKey: string = "usersClickedProfile";
   private static avgMomentNumberKey: string = "avgMomentNumber";
   private static totalViewsKey: string = "totalViews";
+
+  private story: FoodieStory;
 
 
   constructor() {
@@ -33,10 +35,12 @@ class ReputableStory extends Parse.Object {
 
     let promise = new Parse.Promise<ReputableStory>();
     let reputableStory: ReputableStory;
+    let foodieStory: FoodieStory;
 
     let query = new Parse.Query(FoodieStory);
     query.include(FoodieStory.reputationKey);
     query.get(storyId).then(function(story) {
+
       if (!story.get(FoodieStory.reputationKey)) {
         reputableStory = new ReputableStory();
         reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
@@ -44,12 +48,13 @@ class ReputableStory extends Parse.Object {
         reputableStory = story.get(FoodieStory.reputationKey);
         reputableStory.debugConsoleLog(SeverityEnum.Verbose);
       }
+
+      reputableStory.story = story;
       return reputableStory.save(null, masterKeyOption);
 
     }).then(
       function(reputation) {
-        let story = reputation.get(ReputableStory.storyKey);
-        story.set(FoodieStory.reputationKey, reputation);
+        reputableStory.story.set(FoodieStory.reputationKey, reputation);
         promise.resolve(reputation);
       },
 
@@ -67,15 +72,16 @@ class ReputableStory extends Parse.Object {
 
     ReputableStory.getStoryWithLog(storyId).then(function(reputation) {
       reputation.incUsersLiked();
+      return reputation.save(null, masterKeyOption);
 
-      let story = reputation.get(ReputableStory.storyKey);
+    }).then(function(reputation) {
+      let story = reputation.story;
       if (!story) {
         debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!")
       } else {
         story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
       }
-
-      return reputation.save(null, masterKeyOption);
+      return story.save(null, masterKeyOption);
 
     }).then(
       function(reputableStory) {
@@ -93,7 +99,7 @@ class ReputableStory extends Parse.Object {
 
   private initializeReputation(story: FoodieStory, scoreMetricVer: number) {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
-    this.set(ReputableStory.storyKey, story);
+    this.set(ReputableStory.storyIdKey, story.id);
     this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
     this.set(ReputableStory.usersViewedKey, 0);
     this.set(ReputableStory.usersLikedKey, 0);
