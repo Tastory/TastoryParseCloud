@@ -28,7 +28,7 @@ Parse.Cloud.define("storyClaim", function(req, res) {
   }
 
   // Extract storyId and claim type
-  let storyId: string = req.params.storyId;
+  let storyId: string = req.params.targetId;
   let reporterId: string = user.id;
 
   // Process the claim input
@@ -53,9 +53,9 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
                                        "\nTarget ID: " + storyId +
                                        "\nStory Claim Type: " + claimParameters.storyClaimType +
                                        "\nSet or Clear: " + claimParameters.setNotClear +
-                                       "\nReaction Type: " + claimParameters.reactionType +
-                                       "\nAction Type: " + claimParameters.actionType +
-                                       "\nMoment Number: " + claimParameters.momentNumber);
+                                       "\nReaction Type: " + claimParameters.storyReactionType +
+                                       "\nAction Type: " + claimParameters.storyActionType +
+                                       "\nMoment Number: " + claimParameters.storyMomentNumber);
 
   // To understand what action needs to be taken for the new claim inputClaimOnStory
   // We have to first query the ReputableClaim database
@@ -96,13 +96,13 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       case StoryClaimTypeEnum.Reaction:
 
         if (claimParameters.setNotClear) {
-          let reactionType = claimParameters.reactionType;
+          let reactionType = claimParameters.storyReactionType;
           claimToSave = ReputableClaim.createStoryReactionIfNotFound(reporterId, storyId, reactionType, storyClaims);  // Returns claim if created. Null if found
 
           if (claimToSave) { reputableStory.incReactions(reactionType); }
         }
         else {
-          let reactionType = claimParameters.reactionType;
+          let reactionType = claimParameters.storyReactionType;
           claimsToDelete = ReputableClaim.deleteStoryReactionIfFound(reporterId, storyId, reactionType, storyClaims)  // Returns true if cleam deleted
 
           // No matter how many claims, just decrement only by 1 for now
@@ -111,14 +111,14 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
         break;
 
       case StoryClaimTypeEnum.StoryAction:
-        let actionType = claimParameters.actionType;
+        let actionType = claimParameters.storyActionType;
         claimToSave = ReputableClaim.createStoryActionIfNotFound(reporterId, storyId, actionType, storyClaims);   // Returns claim if created. Null if found
 
         if (claimToSave) { reputableStory.incActions(actionType); }
         break;
 
       case StoryClaimTypeEnum.StoryViewed:
-        let storyViewReturn = ReputableClaim.updateStoryViewClaim(reporterId, storyId, claimParameters.momentNumber, storyClaims);   // Returns claim if created. Null if found
+        let storyViewReturn = ReputableClaim.updateStoryViewClaim(reporterId, storyId, claimParameters.storyMomentNumber, storyClaims);   // Returns claim if created. Null if found
         reputableStory.incTotalViewed();
 
         if (storyViewReturn.prevMomentNumber) {
