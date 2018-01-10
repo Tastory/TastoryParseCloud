@@ -127,7 +127,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
                 claimToSave = storyViewReturn.claim;
                 if (claimToSave) {
                     if (storyViewReturn.prevMomentNumber) {
-                        reputableStory.recalAvgMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
+                        reputableStory.recalMaxMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
                     }
                     else {
                         reputableStory.addNewView(storyViewReturn.newMomentNumber);
@@ -236,7 +236,7 @@ class ReputableClaim extends Parse.Object {
         if (existingReactions.length > 1 || matchingReactions.length > 0) {
             logSeverity = SeverityEnum.Warning;
         }
-        debugConsole.log(logSeverity, "Set reaction type " + reactionType + "for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        debugConsole.log(logSeverity, "Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
         if (matchingReactions.length < 1) {
             // No matching reactions found, create a new reaction
             let claim = new ReputableClaim();
@@ -259,7 +259,7 @@ class ReputableClaim extends Parse.Object {
         if (existingReactions.length > 1 || matchingReactions.length < 1) {
             logSeverity = SeverityEnum.Warning;
         }
-        debugConsole.log(logSeverity, "Clear reaction type " + reactionType + "for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        debugConsole.log(logSeverity, "Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
         return matchingReactions;
     }
     static createStoryActionIfNotFound(reporterId, storyId, actionType, claimsHistory) {
@@ -272,7 +272,7 @@ class ReputableClaim extends Parse.Object {
         if (matchingClaims.length > 1) {
             logSeverity = SeverityEnum.Warning;
         }
-        debugConsole.log(logSeverity, "Set action type " + actionType + "for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        debugConsole.log(logSeverity, "Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
         if (matchingClaims.length < 1) {
             // No matching reactions found, create a new reaction
             let claim = new ReputableClaim();
@@ -294,22 +294,23 @@ class ReputableClaim extends Parse.Object {
             logSeverity = SeverityEnum.Warning;
         }
         debugConsole.log(logSeverity, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        let newMomentNumber = momentNumber + 1; // We always treat momentNumber as the momentIndex + 1
         if (matchingClaims.length < 1) {
             // No matching view claim found. Create a new one
             let claim = new ReputableClaim();
-            claim.setAsStoryViewed(reporterId, storyId, momentNumber);
-            return { claim: claim, prevMomentNumber: null, newMomentNumber: momentNumber };
+            claim.setAsStoryViewed(reporterId, storyId, newMomentNumber);
+            return { claim: claim, prevMomentNumber: null, newMomentNumber: newMomentNumber };
         }
         else {
             let claim = matchingClaims[0];
             let prevMomentNumber = claim.get(ReputableClaim.storyMomentNumberKey);
-            debugConsole.log(SeverityEnum.Verbose, "Previous Moment Number is " + prevMomentNumber + ", New Moment Number is " + momentNumber);
-            if (prevMomentNumber < momentNumber) {
-                claim.set(ReputableClaim.storyMomentNumberKey, momentNumber);
-                return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber };
+            debugConsole.log(SeverityEnum.Verbose, "Previous Adjusted Moment Number is " + prevMomentNumber + ", New Adjusted Moment Number is " + newMomentNumber);
+            if (prevMomentNumber < newMomentNumber) {
+                claim.set(ReputableClaim.storyMomentNumberKey, newMomentNumber);
+                return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: newMomentNumber };
             }
             else {
-                return { claim: null, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber };
+                return { claim: null, prevMomentNumber: prevMomentNumber, newMomentNumber: newMomentNumber };
             }
         }
     }
@@ -367,7 +368,7 @@ class ReputableStory extends Parse.Object {
         this.set(ReputableStory.usersSwipedUpKey, 0);
         this.set(ReputableStory.usersClickedVenueKey, 0);
         this.set(ReputableStory.usersClickedProfileKey, 0);
-        this.set(ReputableStory.avgMomentNumberKey, 0);
+        this.set(ReputableStory.totalMomentNumberKey, 0);
         this.set(ReputableStory.totalViewsKey, 0);
     }
     debugConsoleLog(severity) {
@@ -378,7 +379,7 @@ class ReputableStory extends Parse.Object {
             "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
             "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
             "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
-            "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
+            "\n" + ReputableStory.totalMomentNumberKey + ": " + this.get(ReputableStory.totalMomentNumberKey) +
             "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
     }
     // Explicit Claims
@@ -395,12 +396,10 @@ class ReputableStory extends Parse.Object {
         }
     }
     incUsersLiked() {
-        let usersLiked = this.get(ReputableStory.usersLikedKey) + 1;
-        this.set(ReputableStory.usersLikedKey, usersLiked);
+        this.increment(ReputableStory.usersLikedKey);
     }
     decUsersLiked() {
-        let usersLiked = this.get(ReputableStory.usersLikedKey) - 1;
-        this.set(ReputableStory.usersLikedKey, usersLiked);
+        this.increment(ReputableStory.usersLikedKey, -1);
     }
     // Implicit Claims
     incActions(type) {
@@ -414,42 +413,28 @@ class ReputableStory extends Parse.Object {
         }
     }
     incUsersSwipedUp() {
-        let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
-        this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp);
+        this.increment(ReputableStory.usersSwipedUpKey);
     }
     incUsersClickedVenue() {
-        let usersClickedVenue = this.get(ReputableStory.usersClickedVenueKey) + 1;
-        this.set(ReputableStory.usersClickedVenueKey, usersClickedVenue);
+        this.increment(ReputableStory.usersClickedVenueKey);
     }
     incUsersClickedProfile() {
-        let usersClickedProfile = this.get(ReputableStory.usersClickedProfileKey) + 1;
-        this.set(ReputableStory.usersClickedProfileKey, usersClickedProfile);
+        this.increment(ReputableStory.usersClickedProfileKey);
     }
     // View Counts
     incUsersViewed() {
-        let usersViewed = this.get(ReputableStory.usersViewedKey) + 1;
-        this.set(ReputableStory.usersViewedKey, usersViewed);
+        this.increment(ReputableStory.usersViewedKey);
     }
     incTotalViewed() {
-        let totalViews = this.get(ReputableStory.totalViewsKey) + 1;
-        this.set(ReputableStory.totalViewsKey, totalViews);
+        this.increment(ReputableStory.totalViewsKey);
     }
     addNewView(momentNumber) {
-        let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
-        let usersViewed = this.get(ReputableStory.usersViewedKey);
-        let totalMomentNumber = avgMomentNumber * usersViewed;
-        totalMomentNumber += momentNumber;
-        avgMomentNumber = totalMomentNumber / ++usersViewed;
-        this.set(ReputableStory.usersViewedKey, usersViewed);
-        this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+        this.increment(ReputableStory.usersViewedKey);
+        this.increment(ReputableStory.totalMomentNumberKey, momentNumber);
     }
-    recalAvgMomentNumber(prevMomentNumber, newMomentNumber) {
-        let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
-        let usersViewed = this.get(ReputableStory.usersViewedKey);
-        let totalMomentNumber = avgMomentNumber * usersViewed;
-        totalMomentNumber = totalMomentNumber - prevMomentNumber + newMomentNumber;
-        avgMomentNumber = totalMomentNumber / usersViewed;
-        this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+    recalMaxMomentNumber(prevMomentNumber, newMomentNumber) {
+        let momentOffset = newMomentNumber - prevMomentNumber;
+        this.increment(ReputableStory.totalMomentNumberKey, momentOffset);
     }
     calculateStoryScore() {
         return (this.get(ReputableStory.usersLikedKey) * 10) + 20;
@@ -463,7 +448,7 @@ ReputableStory.usersLikedKey = "usersLiked";
 ReputableStory.usersSwipedUpKey = "usersSwipedUp";
 ReputableStory.usersClickedVenueKey = "usersClickedVenue";
 ReputableStory.usersClickedProfileKey = "usersClickedProfile";
-ReputableStory.avgMomentNumberKey = "avgMomentNumber";
+ReputableStory.totalMomentNumberKey = "totalMomentNumber";
 ReputableStory.totalViewsKey = "totalViews";
 Parse.Object.registerSubclass("ReputableStory", ReputableStory);
 //

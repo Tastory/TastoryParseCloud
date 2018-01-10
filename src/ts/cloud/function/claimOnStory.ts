@@ -124,7 +124,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
         if (claimToSave) {
           if (storyViewReturn.prevMomentNumber) {
-            reputableStory.recalAvgMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
+            reputableStory.recalMaxMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
           } else {
             reputableStory.addNewView(storyViewReturn.newMomentNumber);
           }

@@ -16,7 +16,7 @@ class ReputableStory extends Parse.Object {
   static usersSwipedUpKey: string = "usersSwipedUp";
   static usersClickedVenueKey: string = "usersClickedVenue";
   static usersClickedProfileKey: string = "usersClickedProfile";
-  static avgMomentNumberKey: string = "avgMomentNumber";
+  static totalMomentNumberKey: string = "totalMomentNumber";
   static totalViewsKey: string = "totalViews";
 
 
@@ -39,7 +39,7 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.usersSwipedUpKey, 0);
     this.set(ReputableStory.usersClickedVenueKey, 0);
     this.set(ReputableStory.usersClickedProfileKey, 0);
-    this.set(ReputableStory.avgMomentNumberKey, 0);
+    this.set(ReputableStory.totalMomentNumberKey, 0);
     this.set(ReputableStory.totalViewsKey, 0);
   }
 
@@ -52,7 +52,7 @@ class ReputableStory extends Parse.Object {
                                "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
                                "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
                                "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
-                               "\n" + ReputableStory.avgMomentNumberKey + ": " + this.get(ReputableStory.avgMomentNumberKey) +
+                               "\n" + ReputableStory.totalMomentNumberKey + ": " + this.get(ReputableStory.totalMomentNumberKey) +
                                "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
   }
 
@@ -75,13 +75,11 @@ class ReputableStory extends Parse.Object {
   }
 
   incUsersLiked() {
-    let usersLiked = this.get(ReputableStory.usersLikedKey) + 1;
-    this.set(ReputableStory.usersLikedKey, usersLiked);
+    this.increment(ReputableStory.usersLikedKey);
   }
 
   decUsersLiked() {
-    let usersLiked = this.get(ReputableStory.usersLikedKey) - 1;
-    this.set(ReputableStory.usersLikedKey, usersLiked);
+    this.increment(ReputableStory.usersLikedKey, -1);
   }
 
   // Implicit Claims
@@ -98,50 +96,34 @@ class ReputableStory extends Parse.Object {
   }
 
   incUsersSwipedUp() {
-    let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
-    this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp);
+    this.increment(ReputableStory.usersSwipedUpKey);
   }
 
   incUsersClickedVenue() {
-    let usersClickedVenue = this.get(ReputableStory.usersClickedVenueKey) + 1;
-    this.set(ReputableStory.usersClickedVenueKey, usersClickedVenue);
+    this.increment(ReputableStory.usersClickedVenueKey);
   }
 
   incUsersClickedProfile() {
-    let usersClickedProfile = this.get(ReputableStory.usersClickedProfileKey) +1;
-    this.set(ReputableStory.usersClickedProfileKey, usersClickedProfile);
+    this.increment(ReputableStory.usersClickedProfileKey);
   }
 
   // View Counts
   incUsersViewed() {
-    let usersViewed = this.get(ReputableStory.usersViewedKey) + 1;
-    this.set(ReputableStory.usersViewedKey, usersViewed);
+    this.increment(ReputableStory.usersViewedKey);
   }
 
   incTotalViewed() {
-    let totalViews =  this.get(ReputableStory.totalViewsKey) + 1;
-    this.set(ReputableStory.totalViewsKey, totalViews);
+    this.increment(ReputableStory.totalViewsKey);
   }
 
   addNewView(momentNumber: number) {
-    let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
-    let usersViewed = this.get(ReputableStory.usersViewedKey);
-    let totalMomentNumber = avgMomentNumber * usersViewed;
-
-    totalMomentNumber += momentNumber;
-    avgMomentNumber = totalMomentNumber / ++usersViewed;
-    this.set(ReputableStory.usersViewedKey, usersViewed);
-    this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+    this.increment(ReputableStory.usersViewedKey);
+    this.increment(ReputableStory.totalMomentNumberKey, momentNumber);
   }
 
-  recalAvgMomentNumber(prevMomentNumber: number, newMomentNumber: number) {
-    let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
-    let usersViewed = this.get(ReputableStory.usersViewedKey);
-    let totalMomentNumber = avgMomentNumber * usersViewed;
-
-    totalMomentNumber = totalMomentNumber - prevMomentNumber + newMomentNumber;
-    avgMomentNumber = totalMomentNumber / usersViewed;
-    this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
+  recalMaxMomentNumber(prevMomentNumber: number, newMomentNumber: number) {
+    let momentOffset = newMomentNumber - prevMomentNumber;
+    this.increment(ReputableStory.totalMomentNumberKey, momentOffset);
   }
 
   calculateStoryScore(): number {
