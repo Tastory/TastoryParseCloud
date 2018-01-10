@@ -60,162 +60,93 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
   // To understand what action needs to be taken for the new claim inputClaimOnStory
   // We have to first query the ReputableClaim database
+  let storyClaims: ReputableClaim[];
   let query = new Parse.Query(ReputableClaim);
-  query.equalTo("sourceId", reporterId);
-  query.equalTo("targetId", storyId);
-  query.find().then(
+  query.equalTo(ReputableClaim.sourceIdKey, reporterId);
+  query.equalTo(ReputableClaim.targetIdKey, storyId);
+  query.equalTo(ReputableClaim.claimTypeKey, ReputationClaimTypeEnum.StoryClaim);  // We are only dealing with Story Claims in this function
 
-    function(results) {
-      debugConsole.log(SeverityEnum.Debug, "ReputableClaim query resulted in " + results.length + " matches");
+  query.find().then(function(claims) {
+    debugConsole.log(SeverityEnum.Debug, "claimOnStory.ts found " + claims.length + " relevant ReputableClaims");
+    storyClaims = claims;
 
-      // Determine the exact claim scenario, then extract the relevant
-      // parameters and supply it into the next claim processing function
+    // Get the Story & associated Reputation here
+    // Might want to refactor out if there are other claim types to support
+    let query = new Parse.Query(FoodieStory);
+    query.include(FoodieStory.reputationKey);
+    return query.get(storyId);
 
-      switch (claimParameters.storyClaimType) {
-        case StoryClaimTypeEnum.Reaction:
+  }).then(function(story) {
+    let reputableStory: ReputableStory;
 
-          if (claimParameters.setNotClear) {
-            storySetReactionClaim(reporterId, storyId, claimParameters.reactionType, results, callback);
-          }
-          else {
-            storyClearReactionClaim(reporterId, storyId, claimParameters.reactionType, results, callback);
-          }
-          break;
-
-        case StoryClaimTypeEnum.StoryAction:
-          storyActionClaim(reporterId, storyId, claimParameters.actionType, results, callback);
-          break;
-
-        case StoryClaimTypeEnum.StoryViewed:
-          storyViewedClaim(reporterId, storyId, claimParameters.momentNumber, results, callback);
-          break;
-      }
-    },
-
-    function(error) {
-      debugConsole.log(SeverityEnum.Warning, "Parse query failed at " + claimInputForStory.name + "(): " + error.code + " " + error.message);
-      callback(null, "Parse Query failed at claimInputForStory(): " + error.code + " " + error.message);
-    }
-  );
-}
-
-
-function storySetReactionClaim(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
-  debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts - storySetReactionClaim() executed");
-
-  // Look at the claims history for already set reactions
-  let existingReactions = claimsHistory.filter(claim => (claim.get(ReputableClaim.claimTypeKey) === ReputationClaimTypeEnum.StoryClaim &&
-                                                         claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.Reaction));
-
-  debugConsole.log(SeverityEnum.Debug, "StoryReaction filter resulted in " + existingReactions.length + " matches");
-
-  // No previous Reactions found, just set and save a new Reaction
-  if (existingReactions.length === 0) {
-    let storyReactionClaim = new ReputableClaim();
-    storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
-    debugConsole.log(SeverityEnum.Verbose, "No previous Reactions found by " + reporterId + " against " + storyId + " saving a new Story Reaction Claim");
-
-    storyReactionClaim.save(null, masterKeyOption).then(
-      function(object) {
-        ReputableStory.incUsersLikedFor(storyId, callback);
-      },
-
-      function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-        callback(null, "Parse save new Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-      }
-    );
-  }
-
-  // Previous Reactions found
-  else {
-    if (existingReactions.length <= 1) {
-      debugConsole.log(SeverityEnum.Verbose, existingReactions.length + " Reactions found by " + reporterId + " to " + storyId);
+    // Extract the Reputation from the Story. Otherwise create a new ReputableStory object
+    if (!story.get(FoodieStory.reputationKey)) {
+      reputableStory = new ReputableStory();
+      reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
     } else {
-      debugConsole.log(SeverityEnum.Warning, "Unexpected to find " + existingReactions.length + " Reactions by " + reporterId + " to " + storyId);
+      reputableStory = story.get(FoodieStory.reputationKey);
+      reputableStory.debugConsoleLog(SeverityEnum.Verbose);
     }
-    let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
+    reputableStory.story = story;
 
-    // Not the same Reaction, clear, set then save a new Reaction
-    if (existingReactions.length != 1 || matchingReactions.length != 0) {
-      let storyReactionClaim = new ReputableClaim();
-      storyReactionClaim.setAsStoryReaction(reporterId, storyId, reactionType);
-      debugConsole.log(SeverityEnum.Verbose, "Clear and saving a new Story Reaction Claim");
+    // Determine the claim scenario and action applicability
+    // Find the immediate response cases before going into the next Promise chain
+    let claimToSave: ReputableClaim | null = null;
+    let claimsToDelete: ReputableClaim[] = [];
 
-      Parse.Object.destroyAll(existingReactions, masterKeyOption).then(function() {
-        return storyReactionClaim.save(null, masterKeyOption);
+    switch (claimParameters.storyClaimType) {
+      case StoryClaimTypeEnum.Reaction:
 
-      }).then(
-        function(object) {
-          ReputableStory.incUsersLikedFor(storyId, callback);
-        },
+        if (claimParameters.setNotClear) {
+          let reactionType = claimParameters.reactionType;
+          claimToSave = ReputableClaim.createStoryReactionIfNotFound(reporterId, storyId, reactionType, storyClaims);  // Returns claim if created. Null if found
 
-        function(error) {
-          debugConsole.log(SeverityEnum.Warning, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
-          callback(null, "Parse clear & set Story Reaction failed at storySetReactionClaim(): " + error.code + " " + error.message);
+          if (claimToSave) { reputableStory.incReactions(reactionType); }
         }
-      );
+        else {
+          let reactionType = claimParameters.reactionType;
+          claimsToDelete = ReputableClaim.deleteStoryReactionIfFound(reporterId, storyId, reactionType, storyClaims)  // Returns true if cleam deleted
 
-    // Exiting Reaction matches the Desired Reaction
-    } else {
-      ReputableStory.getStoryWithLog(storyId).then(
-        function(reputation) {
-          debugConsole.log(SeverityEnum.Warning, "Desired Reaction state already exist. Calling back for now");
-          callback(reputation, "Desired Reaction state already exist. Success");
-        },
-        function(error) {
-          debugConsole.log(SeverityEnum.Warning, "Cannot even find StoryReputation at storyClearReactionClaim()");
-          callback(null, "Cannot even find StoryReputation at storyClearReactionClaim()");
+          // No matter how many claims, just decrement only by 1 for now
+          if (claimsToDelete.length >= 1) { reputableStory.decReactions(reactionType); }
         }
-      );
+        break;
+
+      case StoryClaimTypeEnum.StoryAction:
+        let actionType = claimParameters.actionType;
+        claimToSave = ReputableClaim.createStoryActionIfNotFound(reporterId, storyId, actionType, storyClaims);   // Returns claim if created. Null if found
+
+        if (claimToSave) { reputableStory.incActions(actionType); }
+        break;
+
+      case StoryClaimTypeEnum.StoryViewed:
+        let storyViewReturn = ReputableClaim.updateStoryViewClaim(reporterId, storyId, claimParameters.momentNumber, storyClaims);   // Returns claim if created. Null if found
+        reputableStory.incTotalViewed();
+
+        if (storyViewReturn.prevMomentNumber) {
+          reputableStory.recalAvgMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
+        } else {
+          reputableStory.addNewView(storyViewReturn.newMomentNumber);
+        }
+        break;
     }
-  }
-}
 
+    if (claimToSave) {
+      // Save Claim & Reputation + Recalculate & Save Story
+    }
 
-function storyClearReactionClaim(reporterId: string, storyId: string, reactionType: StoryReactionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
-  debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyClearReactionClaim.name + "() executed");
+    else if (claimsToDelete.length >= 1) {
+      // Delete Claim(s), Save Reputation & Recalculate & Save Story
+      Parse.Object.destroyAll(claimsToDelete, masterKeyOption).then(
+    }
 
-  // Look at the claims history for already set reactions
-  let existingReactions = claimsHistory.filter(claim => (claim.get(ReputableClaim.claimTypeKey) === ReputationClaimTypeEnum.StoryClaim &&
-                                                         claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.Reaction));
+    else {
+      // Nothing needs to be done, respond with Success
+    }
+  },
 
-  let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
-  debugConsole.log(SeverityEnum.Verbose, "StoryReaction filter for " + reactionType + " resulted in " + existingReactions.length + " existing Reactions & " + matchingReactions.length + " matches");
-
-  // Why is the client even asking for a clear then?
-  if (existingReactions.length === 0 || matchingReactions.length === 0) {
-    ReputableStory.getStoryWithLog(storyId).then(
-      function(reputation) {
-        debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
-        callback(reputation, "Parse clear Story Reaction already cleared at storyClearReactionClaim()");
-      },
-      function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
-        callback(null, "Cannot find StoryReputation at storyClearReactionClaim()" + error.code + " " + error.message);
-      }
-    );
-
-  } else {
-    Parse.Object.destroyAll(matchingReactions, masterKeyOption).then(
-      function() {
-        ReputableStory.decUsersLikedFor(storyId, callback);
-      },
-
-      function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
-        callback(null, "Parse clear Story Reaction failed at storyClearReactionClaim(): " + error.code + " " + error.message);
-      }
-    )
-  }
-}
-
-
-function storyActionClaim(reporterId: string, storyId: string, actionType: StoryActionTypeEnum, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
-  debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyActionClaim.name + "() executed");
-}
-
-
-function storyViewedClaim(reporterId: string, storyId: string, momentNumber: number, claimsHistory: ReputableClaim[], callback: AnyErrorMsgFunction) {
-  debugConsole.log(SeverityEnum.Verbose, "claimOnStory.ts " + storyViewedClaim.name + "() executed");
+  function(error) {
+    debugConsole.log(SeverityEnum.Warning, "Parse query failed at " + claimInputForStory.name + "(): " + error.code + " " + error.message);
+    callback(null, "Parse Query failed at claimInputForStory(): " + error.code + " " + error.message);
+  });
 }

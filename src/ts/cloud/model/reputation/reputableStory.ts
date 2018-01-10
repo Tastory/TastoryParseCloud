@@ -8,17 +8,20 @@
 
 class ReputableStory extends Parse.Object {
 
-  private static storyIdKey: string = "storyId";
-  private static scoreMetricVerKey: string = "scoreMetricVer";
-  private static usersViewedKey: string = "usersViewed";
-  private static usersLikedKey: string = "usersLiked";
-  private static usersSwipedUpKey: string = "usersSwipedUp";
-  private static usersClickedVenueKey: string = "usersClickedVenue";
-  private static usersClickedProfileKey: string = "usersClickedProfile";
-  private static avgMomentNumberKey: string = "avgMomentNumber";
-  private static totalViewsKey: string = "totalViews";
+   // MARK: - Public Static Properties
+  static storyIdKey: string = "storyId";
+  static scoreMetricVerKey: string = "scoreMetricVer";
+  static usersViewedKey: string = "usersViewed";
+  static usersLikedKey: string = "usersLiked";
+  static usersSwipedUpKey: string = "usersSwipedUp";
+  static usersClickedVenueKey: string = "usersClickedVenue";
+  static usersClickedProfileKey: string = "usersClickedProfile";
+  static avgMomentNumberKey: string = "avgMomentNumber";
+  static totalViewsKey: string = "totalViews";
 
-  private story: FoodieStory;
+
+  // MARK: - Public Instance Properties
+  story: FoodieStory;
 
 
   constructor() {
@@ -26,16 +29,16 @@ class ReputableStory extends Parse.Object {
   }
 
 
+  // MARK: - Public Static Functions
   static getStoryWithLog(storyId: string): Parse.Promise<ReputableStory> {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
 
     let promise = new Parse.Promise<ReputableStory>();
-    let reputableStory: ReputableStory;
-    let foodieStory: FoodieStory;
-
     let query = new Parse.Query(FoodieStory);
     query.include(FoodieStory.reputationKey);
     query.get(storyId).then(function(story) {
+
+      let reputableStory: ReputableStory;
 
       if (!story.get(FoodieStory.reputationKey)) {
         reputableStory = new ReputableStory();
@@ -124,7 +127,8 @@ class ReputableStory extends Parse.Object {
   }
 
 
-  private initializeReputation(story: FoodieStory, scoreMetricVer: number) {
+  // MARK: - Public Instance Functions
+  initializeReputation(story: FoodieStory, scoreMetricVer: number) {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
     this.set(ReputableStory.storyIdKey, story.id);
     this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
@@ -138,7 +142,7 @@ class ReputableStory extends Parse.Object {
   }
 
 
-  private debugConsoleLog(severity: SeverityEnum) {
+  debugConsoleLog(severity: SeverityEnum) {
     debugConsole.log(severity, "ReputableStory ID: " + this.id +
                                "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
                                "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
@@ -152,6 +156,22 @@ class ReputableStory extends Parse.Object {
 
 
   // Explicit Claims
+  incReactions(type: StoryReactionTypeEnum) {
+    switch (type) {
+      case StoryReactionTypeEnum.Like:
+        this.incUsersLiked();
+      // For future reaction types
+    }
+  }
+
+  decReactions(type: StoryReactionTypeEnum) {
+    switch (type) {
+      case StoryReactionTypeEnum.Like:
+        this.decUsersLiked();
+      // For future reaction types
+    }
+  }
+
   incUsersLiked() {
     let usersLiked = this.get(ReputableStory.usersLikedKey) + 1;
     this.set(ReputableStory.usersLikedKey, usersLiked);
@@ -163,6 +183,18 @@ class ReputableStory extends Parse.Object {
   }
 
   // Implicit Claims
+  incActions(type: StoryActionTypeEnum) {
+    switch (type) {
+      case StoryActionTypeEnum.Swiped:
+        this.incUsersSwipedUp();
+      case StoryActionTypeEnum.Venue:
+        this.incUsersClickedVenue();
+      case StoryActionTypeEnum.Profile:
+        this.incUsersClickedProfile();
+      // For future reaction types
+    }
+  }
+
   incUsersSwipedUp() {
     let usersSwipedUp = this.get(ReputableStory.usersSwipedUpKey) + 1;
     this.set(ReputableStory.usersSwipedUpKey, usersSwipedUp);
@@ -173,7 +205,7 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.usersClickedVenueKey, usersClickedVenue);
   }
 
-  thisUsersClickedProfile() {
+  incUsersClickedProfile() {
     let usersClickedProfile = this.get(ReputableStory.usersClickedProfileKey) +1;
     this.set(ReputableStory.usersClickedProfileKey, usersClickedProfile);
   }
@@ -187,6 +219,17 @@ class ReputableStory extends Parse.Object {
   incTotalViewed() {
     let totalViews =  this.get(ReputableStory.totalViewsKey) + 1;
     this.set(ReputableStory.totalViewsKey, totalViews);
+  }
+
+  addNewView(momentNumber: number) {
+    let avgMomentNumber = this.get(ReputableStory.avgMomentNumberKey);
+    let usersViewed = this.get(ReputableStory.usersViewedKey);
+    let totalMomentNumber = avgMomentNumber * usersViewed;
+
+    totalMomentNumber += momentNumber;
+    avgMomentNumber = totalMomentNumber / ++usersViewed;
+    this.set(ReputableStory.usersViewedKey, usersViewed);
+    this.set(ReputableStory.avgMomentNumberKey, avgMomentNumber);
   }
 
   recalAvgMomentNumber(prevMomentNumber: number, newMomentNumber: number) {
