@@ -86,6 +86,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       reputableStory = story.get(FoodieStory.reputationKey);
       reputableStory.debugConsoleLog(SeverityEnum.Verbose);
     }
+    reputableStory.story = story;
 
     // Determine the claim scenario and action applicability
     // Find the immediate response cases before going into the next Promise chain
@@ -118,13 +119,15 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
         break;
 
       case StoryClaimTypeEnum.StoryViewed:
-        let storyViewReturn = ReputableClaim.updateStoryViewClaim(reporterId, storyId, claimParameters.storyMomentNumber, storyClaims);   // Returns claim if created. Null if found
-        reputableStory.incTotalViewed();
+        let storyViewReturn = ReputableClaim.updateStoryViewClaim(reporterId, storyId, claimParameters.storyMomentNumber, storyClaims);   // Returns claim if created. Null if update not needed
+        claimToSave = storyViewReturn.claim
 
-        if (storyViewReturn.prevMomentNumber) {
-          reputableStory.recalAvgMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
-        } else {
-          reputableStory.addNewView(storyViewReturn.newMomentNumber);
+        if (claimToSave) {
+          if (storyViewReturn.prevMomentNumber) {
+            reputableStory.recalAvgMomentNumber(storyViewReturn.prevMomentNumber, storyViewReturn.newMomentNumber);
+          } else {
+            reputableStory.addNewView(storyViewReturn.newMomentNumber);
+          }
         }
         break;
     }

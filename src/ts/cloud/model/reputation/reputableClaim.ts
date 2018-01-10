@@ -113,7 +113,7 @@ class ReputableClaim extends Parse.Object {
   }
 
 
-  static updateStoryViewClaim(reporterId: string, storyId: string, momentNumber: number, claimsHistory: ReputableClaim[]): { claim: ReputableClaim, prevMomentNumber: number | null, newMomentNumber: number } {
+  static updateStoryViewClaim(reporterId: string, storyId: string, momentNumber: number, claimsHistory: ReputableClaim[]): { claim: ReputableClaim | null, prevMomentNumber: number | null, newMomentNumber: number } {
     debugConsole.log(SeverityEnum.Verbose, "reputableClaim.ts - createStoryActionIfNotFound() executed");
 
     // Look at the claims history for already set reactions
@@ -133,8 +133,14 @@ class ReputableClaim extends Parse.Object {
     else {
       let claim = matchingClaims[0];
       let prevMomentNumber = claim.get(ReputableClaim.storyMomentNumberKey);
-      claim.set(ReputableClaim.storyMomentNumberKey, momentNumber);
-      return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber }
+      debugConsole.log(SeverityEnum.Verbose, "Previous Moment Number is " + prevMomentNumber + ", New Moment Number is " + momentNumber);
+      
+      if (prevMomentNumber < momentNumber) {
+        claim.set(ReputableClaim.storyMomentNumberKey, momentNumber);
+        return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber }
+      } else {
+        return { claim: null, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber }
+      }
     }
   }
 

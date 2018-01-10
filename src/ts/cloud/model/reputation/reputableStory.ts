@@ -29,73 +29,6 @@ class ReputableStory extends Parse.Object {
   }
 
 
-  // MARK: - Public Static Functions
-  static getStoryWithLog(storyId: string): Parse.Promise<ReputableStory> {
-    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts getStoryWithLog() " + storyId + " executed");
-
-    let promise = new Parse.Promise<ReputableStory>();
-    let query = new Parse.Query(FoodieStory);
-    query.include(FoodieStory.reputationKey);
-    query.get(storyId).then(function(story) {
-
-      let reputableStory: ReputableStory;
-
-      if (!story.get(FoodieStory.reputationKey)) {
-        reputableStory = new ReputableStory();
-        reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
-      } else {
-        reputableStory = story.get(FoodieStory.reputationKey);
-        reputableStory.debugConsoleLog(SeverityEnum.Verbose);
-      }
-
-      reputableStory.story = story;
-      return reputableStory.save(null, masterKeyOption);
-
-    }).then(
-      function(reputation) {
-        promise.resolve(reputation);
-      },
-
-      function(error) {
-        promise.reject(error);
-      }
-    );
-
-    return promise;
-  }
-
-
-  static incUsersLikedFor(storyId: string, callback: AnyErrorMsgFunction) {
-    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts incUsersLikedFor() " + storyId + " executed");
-
-    ReputableStory.getStoryWithLog(storyId).then(function(reputation) {
-      reputation.incUsersLiked();
-      return reputation.save(null, masterKeyOption);
-
-    }).then(function(reputation) {
-      let story = reputation.story;
-      if (!story) {
-        debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!")
-      } else {
-        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
-      }
-      story.set(FoodieStory.reputationKey, reputation);
-      return story.save(null, masterKeyOption);
-
-    }).then(
-      function(story) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + " success")
-        callback(story.get(FoodieStory.reputationKey), "Parse Like for Story ID: " + storyId + " success");
-      },
-
-      function(error) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
-        callback(null, "Parse Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
-      }
-    );
-  }
-
-
   // MARK: - Public Instance Functions
   initializeReputation(story: FoodieStory, scoreMetricVer: number) {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
@@ -212,7 +145,7 @@ class ReputableStory extends Parse.Object {
   }
 
   calculateStoryScore(): number {
-    return 100;
+    return (this.get(ReputableStory.usersLikedKey)*10)+20;
   }
 }
 
