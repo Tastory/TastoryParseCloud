@@ -7,7 +7,6 @@
 //
 
 Parse.Cloud.define("storyClaim", function(req, res) {
-
   debugConsole.log(SeverityEnum.Debug, "claimOnStory.ts ParseCloudFunction 'storyClaim' triggered");
 
   // Then we gotta establish who the reporter is first
@@ -35,11 +34,11 @@ Parse.Cloud.define("storyClaim", function(req, res) {
   // Process the claim input
   claimInputForStory(reporterId, storyId, req.params, function(anyArg: any, errorMsg: string) {
     if (!anyArg) {
-      debugConsole.log(SeverityEnum.Warning, "errorMsg");
+      debugConsole.log(SeverityEnum.Warning, errorMsg);
       res.error(errorMsg);
 
     } else {
-      debugConsole.log(SeverityEnum.Debug, "ParseCloudFunction 'storyClaim' success response")
+      debugConsole.log(SeverityEnum.Debug, "ParseCloudFunction 'storyClaim' from: " + reporterId + " to: " + storyId + " success response")
       res.success(anyArg);
     }
   });
@@ -87,7 +86,6 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       reputableStory = story.get(FoodieStory.reputationKey);
       reputableStory.debugConsoleLog(SeverityEnum.Verbose);
     }
-    reputableStory.story = story;
 
     // Determine the claim scenario and action applicability
     // Find the immediate response cases before going into the next Promise chain
@@ -133,20 +131,54 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
     if (claimToSave) {
       // Save Claim & Reputation + Recalculate & Save Story
+      claimToSave.save(null, masterKeyOption).then(function(claim) {
+        return reputableStory.save(null, masterKeyOption);
+
+      }).then(function(reputation) {
+        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+        story.set(FoodieStory.reputationKey, reputation);
+        return story.save(null, masterKeyOption);
+
+      }).then(function(story) {
+        // Success!
+        callback(story.get(FoodieStory.reputationKey), "");
+      },
+
+      function(error) {
+        debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+        callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
+      });
     }
 
     else if (claimsToDelete.length >= 1) {
       // Delete Claim(s), Save Reputation & Recalculate & Save Story
-      Parse.Object.destroyAll(claimsToDelete, masterKeyOption).then(
+      Parse.Object.destroyAll(claimsToDelete, masterKeyOption).then(function() {
+        return reputableStory.save(null, masterKeyOption);
+
+      }).then(function(reputation) {
+        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+        story.set(FoodieStory.reputationKey, reputation);
+        return story.save(null, masterKeyOption);
+
+      }).then(function(story) {
+        // Success!
+        callback(story.get(FoodieStory.reputationKey), "");
+      },
+
+      function(error) {
+        debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+        callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
+      });
     }
 
     else {
       // Nothing needs to be done, respond with Success
+      callback(reputableStory, "");
     }
   },
 
   function(error) {
-    debugConsole.log(SeverityEnum.Warning, "Parse query failed at " + claimInputForStory.name + "(): " + error.code + " " + error.message);
-    callback(null, "Parse Query failed at claimInputForStory(): " + error.code + " " + error.message);
+    debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+    callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
   });
 }

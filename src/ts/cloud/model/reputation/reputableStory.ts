@@ -96,37 +96,6 @@ class ReputableStory extends Parse.Object {
   }
 
 
-  static decUsersLikedFor(storyId: string, callback: AnyErrorMsgFunction) {
-    debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts decUsersLikedFor() " + storyId + " executed");
-
-    ReputableStory.getStoryWithLog(storyId).then(function(reputation) {
-      reputation.decUsersLiked();
-      return reputation.save(null, masterKeyOption);
-
-    }).then(function(reputation) {
-      let story = reputation.story;
-      if (!story) {
-        debugConsole.log(SeverityEnum.Warning, "ReputableStory does not point to a Story!!!")
-      } else {
-        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
-      }
-      story.set(FoodieStory.reputationKey, reputation);
-      return story.save(null, masterKeyOption);
-
-    }).then(
-      function(story) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Clear Like for Story ID: " + storyId + " success")
-        callback(story.get(FoodieStory.reputationKey), "Parse Clear Like for Story ID: " + storyId + " success");
-      },
-
-      function(error) {
-        debugConsole.log(SeverityEnum.Verbose, "Parse Clear Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
-        callback(null, "Parse Clear Like for Story ID: " + storyId + "failed - " + error.code + " " + error.message);
-      }
-    );
-  }
-
-
   // MARK: - Public Instance Functions
   initializeReputation(story: FoodieStory, scoreMetricVer: number) {
     debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
