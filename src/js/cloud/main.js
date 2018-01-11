@@ -8,6 +8,41 @@
 //
 console.log("Tastory Parse Cloud Code main.js Running");
 //
+//  afterSaveFoodieStory.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+Parse.Cloud.afterSave("FoodieStory", function (request) {
+    let reputableStory;
+    let story = request.object;
+    if (!story.get(FoodieStory.reputationKey)) {
+        reputableStory = new ReputableStory();
+        reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
+        reputableStory.save(null, masterKeyOption).then(function (reputation) {
+            story.set(FoodieStory.reputationKey, reputation);
+            return story.save(null, masterKeyOption);
+        }).then(function (story) {
+            debugConsole.log(SeverityEnum.Debug, "New Reputation ID: " + reputableStory.id + " created for Story ID: " + story.id);
+        }, function (error) {
+            debugConsole.log(SeverityEnum.Warning, "Failed to create Reputation for Story ID: " + story.id);
+        });
+    }
+});
+//
+//  beforeSaveFoodieStory.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
+    let story = request.object;
+    story.set(FoodieStory.discoverabilityKey, 20); // TODO: Initialize or Update Discoverability Score
+    response.success();
+});
+//
 //  global.js
 //  TastoryParseCloud
 //
