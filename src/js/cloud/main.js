@@ -294,23 +294,22 @@ class ReputableClaim extends Parse.Object {
             logSeverity = SeverityEnum.Warning;
         }
         debugConsole.log(logSeverity, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
-        let newMomentNumber = momentNumber + 1; // We always treat momentNumber as the momentIndex + 1
         if (matchingClaims.length < 1) {
             // No matching view claim found. Create a new one
             let claim = new ReputableClaim();
-            claim.setAsStoryViewed(reporterId, storyId, newMomentNumber);
-            return { claim: claim, prevMomentNumber: null, newMomentNumber: newMomentNumber };
+            claim.setAsStoryViewed(reporterId, storyId, momentNumber);
+            return { claim: claim, prevMomentNumber: null, newMomentNumber: momentNumber };
         }
         else {
             let claim = matchingClaims[0];
             let prevMomentNumber = claim.get(ReputableClaim.storyMomentNumberKey);
-            debugConsole.log(SeverityEnum.Verbose, "Previous Adjusted Moment Number is " + prevMomentNumber + ", New Adjusted Moment Number is " + newMomentNumber);
-            if (prevMomentNumber < newMomentNumber) {
-                claim.set(ReputableClaim.storyMomentNumberKey, newMomentNumber);
-                return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: newMomentNumber };
+            debugConsole.log(SeverityEnum.Verbose, "Previous Adjusted Moment Number is " + prevMomentNumber + ", New Adjusted Moment Number is " + momentNumber);
+            if (momentNumber > prevMomentNumber) {
+                claim.set(ReputableClaim.storyMomentNumberKey, momentNumber);
+                return { claim: claim, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber };
             }
             else {
-                return { claim: null, prevMomentNumber: prevMomentNumber, newMomentNumber: newMomentNumber };
+                return { claim: null, prevMomentNumber: prevMomentNumber, newMomentNumber: momentNumber };
             }
         }
     }
@@ -387,12 +386,14 @@ class ReputableStory extends Parse.Object {
         switch (type) {
             case StoryReactionTypeEnum.Like:
                 this.incUsersLiked();
+                break;
         }
     }
     decReactions(type) {
         switch (type) {
             case StoryReactionTypeEnum.Like:
                 this.decUsersLiked();
+                break;
         }
     }
     incUsersLiked() {
@@ -406,10 +407,13 @@ class ReputableStory extends Parse.Object {
         switch (type) {
             case StoryActionTypeEnum.Swiped:
                 this.incUsersSwipedUp();
+                break;
             case StoryActionTypeEnum.Venue:
                 this.incUsersClickedVenue();
+                break;
             case StoryActionTypeEnum.Profile:
                 this.incUsersClickedProfile();
+                break;
         }
     }
     incUsersSwipedUp() {

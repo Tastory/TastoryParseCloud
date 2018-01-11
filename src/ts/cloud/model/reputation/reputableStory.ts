@@ -62,6 +62,7 @@ class ReputableStory extends Parse.Object {
     switch (type) {
       case StoryReactionTypeEnum.Like:
         this.incUsersLiked();
+        break;
       // For future reaction types
     }
   }
@@ -70,6 +71,7 @@ class ReputableStory extends Parse.Object {
     switch (type) {
       case StoryReactionTypeEnum.Like:
         this.decUsersLiked();
+        break;
       // For future reaction types
     }
   }
@@ -87,10 +89,13 @@ class ReputableStory extends Parse.Object {
     switch (type) {
       case StoryActionTypeEnum.Swiped:
         this.incUsersSwipedUp();
+        break;
       case StoryActionTypeEnum.Venue:
         this.incUsersClickedVenue();
+        break;
       case StoryActionTypeEnum.Profile:
         this.incUsersClickedProfile();
+        break;
       // For future reaction types
     }
   }
