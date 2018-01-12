@@ -8,6 +8,6 @@
 
 Parse.Cloud.beforeSave("FoodieStory", function(request, response) {
   let story = request.object;
-  story.set(FoodieStory.discoverabilityKey, 20);  // TODO: Initialize or Update Discoverability Score
+  story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore);  // TODO: Initialize or Update Discoverability Score
   response.success()
 });

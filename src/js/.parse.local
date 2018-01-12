@@ -1,5 +1,8 @@
 {
   "applications": {
+    "Tastory": {
+      "applicationId": "50SE7cRLJJEk67dKe2N2WYmmRrPiBVQPDbTjJcSk"
+    },
     "Tastory:Dev:Howard": {
       "applicationId": "L9lKtiKM6p7tltl32yfKs2ILLEJrnGpo1hwevYck"
     },

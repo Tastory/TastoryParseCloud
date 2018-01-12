@@ -24,6 +24,7 @@ class ReputableStory extends Parse.Object {
   story: FoodieStory;
 
 
+  // MARK: - Constructor
   constructor() {
     super("ReputableStory");
   }
@@ -43,17 +44,53 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.totalViewsKey, 0);
   }
 
+  // Property Accessors
+  getScoreMetricVer(): number {
+    let getValue = this.get(ReputableStory.scoreMetricVerKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
 
-  debugConsoleLog(severity: SeverityEnum) {
-    debugConsole.log(severity, "ReputableStory ID: " + this.id +
-                               "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
-                               "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
-                               "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
-                               "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
-                               "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
-                               "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
-                               "\n" + ReputableStory.totalMomentNumberKey + ": " + this.get(ReputableStory.totalMomentNumberKey) +
-                               "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
+  getUsersViewed(): number {
+    let getValue = this.get(ReputableStory.usersViewedKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getUsersLiked(): number {
+    let getValue = this.get(ReputableStory.usersLikedKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getUsersSwipedUp(): number {
+    let getValue = this.get(ReputableStory.usersSwipedUpKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getUsersClickedVenue(): number {
+    let getValue = this.get(ReputableStory.usersClickedVenueKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getUsersClickedProfile(): number {
+    let getValue = this.get(ReputableStory.usersClickedProfileKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getTotalMomentNumber(): number {
+    let getValue = this.get(ReputableStory.totalMomentNumberKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getTotalViews(): number {
+    let getValue = this.get(ReputableStory.totalViewsKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
   }
 
 
@@ -131,8 +168,28 @@ class ReputableStory extends Parse.Object {
     this.increment(ReputableStory.totalMomentNumberKey, momentOffset);
   }
 
+  // Score Calculation
   calculateStoryScore(): number {
-    return (this.get(ReputableStory.usersLikedKey)*10)+20;
+    let scoringEngine = ScoreStoryMetric.scoreMetricVer[this.getScoreMetricVer()];
+
+    if (scoringEngine) {
+      return scoringEngine.calculate(this.story, this);
+    } else {
+      return ScoreStoryMetric.defaultScore;
+    }
+  }
+
+  // Logging
+  debugConsoleLog(severity: SeverityEnum) {
+    debugConsole.log(severity, "ReputableStory ID: " + this.id +
+                               "\n" + ReputableStory.scoreMetricVerKey + ": " + this.getScoreMetricVer() +
+                               "\n" + ReputableStory.usersViewedKey + ": " + this.getUsersViewed() +
+                               "\n" + ReputableStory.usersLikedKey + ": " + this.getUsersLiked() +
+                               "\n" + ReputableStory.usersSwipedUpKey + ": " + this.getUsersSwipedUp() +
+                               "\n" + ReputableStory.usersClickedVenueKey + ": " + this.getUsersClickedVenue() +
+                               "\n" + ReputableStory.usersClickedProfileKey + ": " + this.getUsersClickedProfile() +
+                               "\n" + ReputableStory.totalMomentNumberKey + ": " + this.getTotalMomentNumber() +
+                               "\n" + ReputableStory.totalViewsKey + ": " + this.getTotalViews());
   }
 }
 
