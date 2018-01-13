@@ -8,15 +8,311 @@
 //
 console.log("Tastory Parse Cloud Code main.js Running");
 //
+//  global.js
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-05
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+const masterKeyOption = { useMasterKey: true };
+var reputationScoreStoryMetricVer = 1;
+//
+//  debugConsole.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-05
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+/* !!! Define Severity Enum here !!! */
+var SeverityEnum;
+//
+//  debugConsole.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-05
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+/* !!! Define Severity Enum here !!! */
+(function (SeverityEnum) {
+    SeverityEnum[SeverityEnum["Verbose"] = 0] = "Verbose";
+    SeverityEnum[SeverityEnum["Debug"] = 1] = "Debug";
+    SeverityEnum[SeverityEnum["Info"] = 2] = "Info";
+    SeverityEnum[SeverityEnum["Warning"] = 3] = "Warning";
+})(SeverityEnum || (SeverityEnum = {}));
+/* !!! Configure Global Debug Severity here !!! */
+let debugConsoleSeverity = SeverityEnum.Verbose;
+class DebugConsole {
+    // MARK: - Class Constructor
+    constructor(severity) {
+        this.loggingSeverity = severity;
+    }
+    // MARK: - Public Static Functions
+    static getSingleton() {
+        if (!DebugConsole.singleton) {
+            DebugConsole.singleton = new DebugConsole(debugConsoleSeverity);
+        }
+        return DebugConsole.singleton;
+    }
+    // MARK: - Private Instance Functions
+    severityHeader(severity) {
+        switch (severity) {
+            case SeverityEnum.Verbose:
+                return "VERBOSE: ";
+            case SeverityEnum.Debug:
+                return "DEBUG:   ";
+            case SeverityEnum.Info:
+                return "INFO:    ";
+            case SeverityEnum.Warning:
+                return "WARNING: ";
+        }
+    }
+    // MARK: - Public Instance Functions
+    log(severity, message) {
+        if (severity >= this.loggingSeverity) {
+            console.log(this.severityHeader(severity) + message);
+        }
+    }
+    error(message) {
+        console.error("ERROR:   " + message);
+    }
+}
+// MARK: - Global Access to Debug Print Singleton
+var debugConsole = DebugConsole.getSingleton();
+//
+//  foodieStory.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+class FoodieStory extends Parse.Object {
+    constructor() {
+        super("FoodieStory");
+    }
+}
+FoodieStory.reputationKey = "reputation";
+FoodieStory.discoverabilityKey = "discoverability";
+Parse.Object.registerSubclass("FoodieStory", FoodieStory);
+//
+//  reputableStory.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+class ReputableStory extends Parse.Object {
+    // MARK: - Constructor
+    constructor() {
+        super("ReputableStory");
+    }
+    // MARK: - Public Instance Functions
+    initializeReputation(story, scoreMetricVer) {
+        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
+        this.set(ReputableStory.storyIdKey, story.id);
+        this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
+        this.set(ReputableStory.usersViewedKey, 0);
+        this.set(ReputableStory.usersLikedKey, 0);
+        this.set(ReputableStory.usersSwipedUpKey, 0);
+        this.set(ReputableStory.usersClickedVenueKey, 0);
+        this.set(ReputableStory.usersClickedProfileKey, 0);
+        this.set(ReputableStory.totalMomentNumberKey, 0);
+        this.set(ReputableStory.totalViewsKey, 0);
+    }
+    // Property Accessors
+    getStoryId() {
+        let getValue = this.get(ReputableStory.storyIdKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return "";
+        }
+    }
+    getScoreMetricVer() {
+        let getValue = this.get(ReputableStory.scoreMetricVerKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getUsersViewed() {
+        let getValue = this.get(ReputableStory.usersViewedKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getUsersLiked() {
+        let getValue = this.get(ReputableStory.usersLikedKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getUsersSwipedUp() {
+        let getValue = this.get(ReputableStory.usersSwipedUpKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getUsersClickedVenue() {
+        let getValue = this.get(ReputableStory.usersClickedVenueKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getUsersClickedProfile() {
+        let getValue = this.get(ReputableStory.usersClickedProfileKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getTotalMomentNumber() {
+        let getValue = this.get(ReputableStory.totalMomentNumberKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    getTotalViews() {
+        let getValue = this.get(ReputableStory.totalViewsKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
+    // Explicit Claims
+    incReactions(type) {
+        switch (type) {
+            case StoryReactionTypeEnum.Like:
+                this.incUsersLiked();
+                break;
+        }
+    }
+    decReactions(type) {
+        switch (type) {
+            case StoryReactionTypeEnum.Like:
+                this.decUsersLiked();
+                break;
+        }
+    }
+    incUsersLiked() {
+        this.increment(ReputableStory.usersLikedKey);
+    }
+    decUsersLiked() {
+        this.increment(ReputableStory.usersLikedKey, -1);
+    }
+    // Implicit Claims
+    incActions(type) {
+        switch (type) {
+            case StoryActionTypeEnum.Swiped:
+                this.incUsersSwipedUp();
+                break;
+            case StoryActionTypeEnum.Venue:
+                this.incUsersClickedVenue();
+                break;
+            case StoryActionTypeEnum.Profile:
+                this.incUsersClickedProfile();
+                break;
+        }
+    }
+    incUsersSwipedUp() {
+        this.increment(ReputableStory.usersSwipedUpKey);
+    }
+    incUsersClickedVenue() {
+        this.increment(ReputableStory.usersClickedVenueKey);
+    }
+    incUsersClickedProfile() {
+        this.increment(ReputableStory.usersClickedProfileKey);
+    }
+    // View Counts
+    incUsersViewed() {
+        this.increment(ReputableStory.usersViewedKey);
+    }
+    incTotalViewed() {
+        this.increment(ReputableStory.totalViewsKey);
+    }
+    addNewView(momentNumber) {
+        this.increment(ReputableStory.usersViewedKey);
+        this.increment(ReputableStory.totalMomentNumberKey, momentNumber);
+    }
+    recalMaxMomentNumber(prevMomentNumber, newMomentNumber) {
+        let momentOffset = newMomentNumber - prevMomentNumber;
+        this.increment(ReputableStory.totalMomentNumberKey, momentOffset);
+    }
+    // Score Calculation
+    calculateStoryScore() {
+        let scoringEngine = ScoreStoryMetric.scoreMetricVer[this.getScoreMetricVer()];
+        debugConsole.log(SeverityEnum.Verbose, "calculating Story Score");
+        if (scoringEngine) {
+            return scoringEngine.calculate(this.story, this);
+        }
+        else {
+            debugConsole.log(SeverityEnum.Warning, "Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
+            return ScoreStoryMetric.defaultScore;
+        }
+    }
+    // Logging
+    debugConsoleLog(severity) {
+        debugConsole.log(severity, "ReputableStory ID: " + this.id +
+            "\n" + ReputableStory.scoreMetricVerKey + ": " + this.getScoreMetricVer() +
+            "\n" + ReputableStory.usersViewedKey + ": " + this.getUsersViewed() +
+            "\n" + ReputableStory.usersLikedKey + ": " + this.getUsersLiked() +
+            "\n" + ReputableStory.usersSwipedUpKey + ": " + this.getUsersSwipedUp() +
+            "\n" + ReputableStory.usersClickedVenueKey + ": " + this.getUsersClickedVenue() +
+            "\n" + ReputableStory.usersClickedProfileKey + ": " + this.getUsersClickedProfile() +
+            "\n" + ReputableStory.totalMomentNumberKey + ": " + this.getTotalMomentNumber() +
+            "\n" + ReputableStory.totalViewsKey + ": " + this.getTotalViews());
+    }
+}
+// MARK: - Public Static Properties
+ReputableStory.storyIdKey = "storyId";
+ReputableStory.scoreMetricVerKey = "scoreMetricVer";
+ReputableStory.usersViewedKey = "usersViewed";
+ReputableStory.usersLikedKey = "usersLiked";
+ReputableStory.usersSwipedUpKey = "usersSwipedUp";
+ReputableStory.usersClickedVenueKey = "usersClickedVenue";
+ReputableStory.usersClickedProfileKey = "usersClickedProfile";
+ReputableStory.totalMomentNumberKey = "totalMomentNumber";
+ReputableStory.totalViewsKey = "totalViews";
+Parse.Object.registerSubclass("ReputableStory", ReputableStory);
+//
 //  afterSaveFoodieStory.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
 //  Copyright © 2018 Tastry. All rights reserved.
 //
+//
+// MARK: - TypeScript Dependecies
+/// <reference path="../common/global.ts" />
+/// <reference path="../utilities/debugConsole.ts" />
+/// <reference path="../model/foodie/foodieStory.ts" />
+/// <reference path="../model/reputation/reputableStory.ts" />
 Parse.Cloud.afterSave("FoodieStory", function (request) {
     let reputableStory;
     let story = request.object;
+    debugConsole.log(SeverityEnum.Verbose, "afterSave for storyID " + story.id);
+    // We'll just check the existance of a reputableStory object. But dont't access it! It's not yet fetched!
     if (!story.get(FoodieStory.reputationKey)) {
         reputableStory = new ReputableStory();
         reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);
@@ -39,18 +335,26 @@ Parse.Cloud.afterSave("FoodieStory", function (request) {
 //
 Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
     let story = request.object;
-    story.set(FoodieStory.discoverabilityKey, 20); // TODO: Initialize or Update Discoverability Score
-    response.success();
+    let reputation = story.get(FoodieStory.reputationKey);
+    if (reputation) {
+        debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id + " with Reputation");
+        reputation.fetch().then(function (reputableStory) {
+            debugConsole.log(SeverityEnum.Verbose, "beforeSave reputation fetched for storyID " + story.id);
+            reputableStory.story = story;
+            story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+            response.success();
+        }, function (error) {
+            debugConsole.log(SeverityEnum.Warning, "Unable to fetch ReputableStory for Story ID: " + story.id);
+            story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.defaultScore); // TODO: Initialize or Update Discoverability Score
+            response.success();
+        });
+    }
+    else {
+        debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id + " without Reputation");
+        story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore); // TODO: Initialize or Update Discoverability Score
+        response.success();
+    }
 });
-//
-//  global.js
-//  TastoryParseCloud
-//
-//  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
-//
-const masterKeyOption = { useMasterKey: true };
-var reputationScoreStoryMetricVer = 1;
 //
 //  claimOnStory.ts
 //  TastoryParseCloud
@@ -212,21 +516,6 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
     });
 }
 //
-//  foodieStory.ts
-//  TastoryParseCloud
-//
-//  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
-//
-class FoodieStory extends Parse.Object {
-    constructor() {
-        super("FoodieStory");
-    }
-}
-FoodieStory.reputationKey = "reputation";
-FoodieStory.discoverabilityKey = "discoverability";
-Parse.Object.registerSubclass("FoodieStory", FoodieStory);
-//
 //  reputableClaim.ts
 //  TastoryParseCloud
 //
@@ -234,6 +523,13 @@ Parse.Object.registerSubclass("FoodieStory", FoodieStory);
 //  Copyright © 2018 Tastry. All rights reserved.
 //
 var ReputationClaimTypeEnum;
+//
+//  reputableClaim.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
 (function (ReputationClaimTypeEnum) {
     ReputationClaimTypeEnum["StoryClaim"] = "storyClaim";
 })(ReputationClaimTypeEnum || (ReputationClaimTypeEnum = {}));
@@ -382,115 +678,6 @@ ReputableClaim.storyActionTypeKey = "storyActionType";
 ReputableClaim.storyMomentNumberKey = "storyMomentNumber";
 Parse.Object.registerSubclass("ReputableClaim", ReputableClaim);
 //
-//  reputableStory.ts
-//  TastoryParseCloud
-//
-//  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
-//
-class ReputableStory extends Parse.Object {
-    constructor() {
-        super("ReputableStory");
-    }
-    // MARK: - Public Instance Functions
-    initializeReputation(story, scoreMetricVer) {
-        debugConsole.log(SeverityEnum.Verbose, "reputableStory.ts initializeReputation() for Story ID: " + story.id + " executed");
-        this.set(ReputableStory.storyIdKey, story.id);
-        this.set(ReputableStory.scoreMetricVerKey, scoreMetricVer);
-        this.set(ReputableStory.usersViewedKey, 0);
-        this.set(ReputableStory.usersLikedKey, 0);
-        this.set(ReputableStory.usersSwipedUpKey, 0);
-        this.set(ReputableStory.usersClickedVenueKey, 0);
-        this.set(ReputableStory.usersClickedProfileKey, 0);
-        this.set(ReputableStory.totalMomentNumberKey, 0);
-        this.set(ReputableStory.totalViewsKey, 0);
-    }
-    debugConsoleLog(severity) {
-        debugConsole.log(severity, "ReputableStory ID: " + this.id +
-            "\n" + ReputableStory.scoreMetricVerKey + ": " + this.get(ReputableStory.scoreMetricVerKey) +
-            "\n" + ReputableStory.usersViewedKey + ": " + this.get(ReputableStory.usersViewedKey) +
-            "\n" + ReputableStory.usersLikedKey + ": " + this.get(ReputableStory.usersLikedKey) +
-            "\n" + ReputableStory.usersSwipedUpKey + ": " + this.get(ReputableStory.usersSwipedUpKey) +
-            "\n" + ReputableStory.usersClickedVenueKey + ": " + this.get(ReputableStory.usersClickedVenueKey) +
-            "\n" + ReputableStory.usersClickedProfileKey + ": " + this.get(ReputableStory.usersClickedProfileKey) +
-            "\n" + ReputableStory.totalMomentNumberKey + ": " + this.get(ReputableStory.totalMomentNumberKey) +
-            "\n" + ReputableStory.totalViewsKey + ": " + this.get(ReputableStory.totalViewsKey));
-    }
-    // Explicit Claims
-    incReactions(type) {
-        switch (type) {
-            case StoryReactionTypeEnum.Like:
-                this.incUsersLiked();
-                break;
-        }
-    }
-    decReactions(type) {
-        switch (type) {
-            case StoryReactionTypeEnum.Like:
-                this.decUsersLiked();
-                break;
-        }
-    }
-    incUsersLiked() {
-        this.increment(ReputableStory.usersLikedKey);
-    }
-    decUsersLiked() {
-        this.increment(ReputableStory.usersLikedKey, -1);
-    }
-    // Implicit Claims
-    incActions(type) {
-        switch (type) {
-            case StoryActionTypeEnum.Swiped:
-                this.incUsersSwipedUp();
-                break;
-            case StoryActionTypeEnum.Venue:
-                this.incUsersClickedVenue();
-                break;
-            case StoryActionTypeEnum.Profile:
-                this.incUsersClickedProfile();
-                break;
-        }
-    }
-    incUsersSwipedUp() {
-        this.increment(ReputableStory.usersSwipedUpKey);
-    }
-    incUsersClickedVenue() {
-        this.increment(ReputableStory.usersClickedVenueKey);
-    }
-    incUsersClickedProfile() {
-        this.increment(ReputableStory.usersClickedProfileKey);
-    }
-    // View Counts
-    incUsersViewed() {
-        this.increment(ReputableStory.usersViewedKey);
-    }
-    incTotalViewed() {
-        this.increment(ReputableStory.totalViewsKey);
-    }
-    addNewView(momentNumber) {
-        this.increment(ReputableStory.usersViewedKey);
-        this.increment(ReputableStory.totalMomentNumberKey, momentNumber);
-    }
-    recalMaxMomentNumber(prevMomentNumber, newMomentNumber) {
-        let momentOffset = newMomentNumber - prevMomentNumber;
-        this.increment(ReputableStory.totalMomentNumberKey, momentOffset);
-    }
-    calculateStoryScore() {
-        return (this.get(ReputableStory.usersLikedKey) * 10) + 20;
-    }
-}
-// MARK: - Public Static Properties
-ReputableStory.storyIdKey = "storyId";
-ReputableStory.scoreMetricVerKey = "scoreMetricVer";
-ReputableStory.usersViewedKey = "usersViewed";
-ReputableStory.usersLikedKey = "usersLiked";
-ReputableStory.usersSwipedUpKey = "usersSwipedUp";
-ReputableStory.usersClickedVenueKey = "usersClickedVenue";
-ReputableStory.usersClickedProfileKey = "usersClickedProfile";
-ReputableStory.totalMomentNumberKey = "totalMomentNumber";
-ReputableStory.totalViewsKey = "totalViews";
-Parse.Object.registerSubclass("ReputableStory", ReputableStory);
-//
 //  reputableUser.ts
 //  TastoryParseCloud
 //
@@ -511,88 +698,93 @@ Parse.Object.registerSubclass("ReputableUser", ReputableUser);
 //  Copyright © 2018 Tastry. All rights reserved.
 //
 class ScoreStoryMetric {
-    constructor(baseScore, percentageLikeWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageProfileClickedWeighting, percetnageVenueClickedWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentInverseConstant, usersViewedLogConstant) {
+    // MARK: - Constructor
+    constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
         this.baseScore = baseScore;
-        this.percentageLikeWeighting = percentageLikeWeighting;
+        this.percentageLikedWeighting = percentageLikedWeighting;
         this.avgMomentWeighting = avgMomentWeighting;
         this.usersViewedWeighting = usersViewedWeighting;
         this.percentageSwipedWeighting = percentageSwipedWeighting;
-        this.percentageProfileClickedWeighting = percentageProfileClickedWeighting;
-        this.percetnageVenueClickedWeighting = percetnageVenueClickedWeighting;
+        this.percentageClickedProfileWeighting = percentageClickedProfileWeighting;
+        this.percentageClickedVenueWeighting = percentageClickedVenueWeighting;
         this.newnessFactor = newnessFactor;
         this.newnessHalfLife = newnessHalfLife;
         this.decayHalfLife = decayHalfLife;
-        this.avgMomentInverseConstant = avgMomentInverseConstant;
-        this.usersViewedLogConstant = usersViewedLogConstant;
+        this.avgMomentNormalizeConstant = avgMomentNormalizeConstant;
+        this.usersViewedNormalizeLogConstant = usersViewedNormalizeLogConstant;
+    }
+    // MARK: - Public Instance Properties
+    calculate(story, reputation) {
+        const msInDay = 24 * 60 * 60 * 1000;
+        let currentDate = new Date();
+        let creationTime = story.createdAt.getTime() / msInDay;
+        let currentTime = currentDate.getTime() / msInDay;
+        let storyAge = currentTime - creationTime; // This is in days
+        debugConsole.log(SeverityEnum.Verbose, "Quality Score Calculation timestamp: " + currentDate.toUTCString() + " in Days" + currentTime + ",  creationDays: " + creationTime);
+        // Let's see how much Newness Boost there is
+        // Boost Score = Newness Factor x 1/(2^time)
+        let newnessBoost = this.newnessFactor * 1 / Math.pow(2, storyAge);
+        debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
+        // Let's calculate the Quality Component Score!!
+        // User Views logarithmic normalization
+        // User View Component Score = 1 - 1/log20(time + 20), where 20 is an example normalization constant
+        let usersViewed = reputation.getUsersViewed();
+        let usersViewedNormalized = 1 - 1 / (Math.log(usersViewed + this.usersViewedNormalizeLogConstant) / Math.log(this.usersViewedNormalizeLogConstant));
+        let usersViewedWeighted = this.usersViewedWeighting * usersViewedNormalized;
+        debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
+        // Calculate the average number of Moments viewed
+        let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
+        // Moment number inverse normalization
+        let avgMomentsNormalized = this.normalizeAvgMoment(avgMomentsViewed);
+        let avgMomentsWeighted = this.avgMomentWeighting * avgMomentsNormalized;
+        debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+        let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
+        let percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
+        let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
+        let percentageSwipedWeighted = this.percentageSwipedWeighting * percentageSwiped;
+        let percentageClickedProfile = reputation.getUsersClickedProfile() / reputation.getUsersViewed();
+        let percentageClickedProfileWeighted = this.percentageClickedProfileWeighting * percentageClickedProfile;
+        let percentageClickedVenue = reputation.getUsersClickedVenue() / reputation.getUsersViewed();
+        let percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
+        // Finally the Quality Component Score!!
+        let qualityComponent = this.baseScore +
+            percentageLikedWeighted +
+            percentageSwipedWeighted +
+            percentageClickedProfileWeighted +
+            percentageClickedVenueWeighted +
+            usersViewedWeighted +
+            avgMomentsWeighted;
+        debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
+        // Apply Quality Decay Half Life
+        let decayedQuality = qualityComponent * 1 / Math.pow(2, storyAge / this.decayHalfLife);
+        debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
+        let totalScore = newnessBoost + decayedQuality;
+        debugConsole.log(SeverityEnum.Verbose, "Total Quality Score for storyID: " + story.id + " = " + totalScore);
+        return totalScore;
+    }
+    normalizeUsersViewed(usersViewed) {
+        return 1 - 1 / (Math.log(usersViewed + this.usersViewedNormalizeLogConstant) / Math.log(this.usersViewedNormalizeLogConstant));
+    }
+    normalizeAvgMoment(avgMoment) {
+        return 1 - 1 / (this.avgMomentNormalizeConstant * avgMoment + 1);
     }
 }
+ScoreStoryMetric.initialScore = 100; // 90 on max Newness Boost + 10 on base quality score
+ScoreStoryMetric.defaultScore = 65; // Random middle of the road score
+// MARK: - Defining Scoring Metric Versions
 ScoreStoryMetric.scoreMetricVer = [
+    null,
     // Story Scoring Metric ver. 1
     new ScoreStoryMetric(10, // baseScore: number;
-    40, // percentageLikeWeighting: number;
+    40, // percentageLikedWeighting: number;
     30, // avgMomentWeighting: number;
     30, // usersViewedWeighting: number;
     20, // percentageSwipedWeighting: number;
-    10, // percentageProfileClickedWeighting: number;
-    10, // percetnageVenueClickedWeighting: number;
-    0.9, // newnessFactor: number;
+    10, // percentageClickedProfileWeighting: number;
+    10, // percentageClickedVenueWeighting: number;
+    90, // newnessFactor: number;
     1.0, // newnessHalfLife: number; (in days)
     120, // decayHalfLife: number; (in days)
-    0.3, // avgMomentInverseConstant: number;
-    20) // usersViewedLogConstant: number;
-    // More Story Scoring Metrics...
+    0.3, // avgMomentNormalizeConstant: number;
+    20) // usersViewedNormalizeLogConstant: number;
 ];
-//
-//  debugConsole.ts
-//  TastoryParseCloud
-//
-//  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
-//
-/* !!! Define Severity Enum here !!! */
-var SeverityEnum;
-(function (SeverityEnum) {
-    SeverityEnum[SeverityEnum["Verbose"] = 0] = "Verbose";
-    SeverityEnum[SeverityEnum["Debug"] = 1] = "Debug";
-    SeverityEnum[SeverityEnum["Info"] = 2] = "Info";
-    SeverityEnum[SeverityEnum["Warning"] = 3] = "Warning";
-})(SeverityEnum || (SeverityEnum = {}));
-/* !!! Configure Global Debug Severity here !!! */
-let debugConsoleSeverity = SeverityEnum.Verbose;
-class DebugConsole {
-    // MARK: - Class Constructor
-    constructor(severity) {
-        this.loggingSeverity = severity;
-    }
-    // MARK: - Public Static Functions
-    static getSingleton() {
-        if (!DebugConsole.singleton) {
-            DebugConsole.singleton = new DebugConsole(debugConsoleSeverity);
-        }
-        return DebugConsole.singleton;
-    }
-    // MARK: - Private Instance Functions
-    severityHeader(severity) {
-        switch (severity) {
-            case SeverityEnum.Verbose:
-                return "VERBOSE: ";
-            case SeverityEnum.Debug:
-                return "DEBUG:   ";
-            case SeverityEnum.Info:
-                return "INFO:    ";
-            case SeverityEnum.Warning:
-                return "WARNING: ";
-        }
-    }
-    // MARK: - Public Instance Functions
-    log(severity, message) {
-        if (severity >= this.loggingSeverity) {
-            console.log(this.severityHeader(severity) + message);
-        }
-    }
-    error(message) {
-        console.error("ERROR:   " + message);
-    }
-}
-// MARK: - Global Access to Debug Print Singleton
-var debugConsole = DebugConsole.getSingleton();

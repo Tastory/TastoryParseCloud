@@ -86,7 +86,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       reputableStory = story.get(FoodieStory.reputationKey);
       reputableStory.debugConsoleLog(SeverityEnum.Verbose);
     }
-    reputableStory.story = story;
+    reputableStory.story = story; // Important! This handle is not auto populated by Parse. Always manually populate!
 
     // Determine the claim scenario and action applicability
     // Find the immediate response cases before going into the next Promise chain
@@ -138,6 +138,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
         return reputableStory.save(null, masterKeyOption);
 
       }).then(function(reputation) {
+        reputation.story = story;  // Just in case
         story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
         story.set(FoodieStory.reputationKey, reputation);
         return story.save(null, masterKeyOption);
@@ -159,6 +160,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
         return reputableStory.save(null, masterKeyOption);
 
       }).then(function(reputation) {
+        reputation.story = story;  // Just in case
         story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
         story.set(FoodieStory.reputationKey, reputation);
         return story.save(null, masterKeyOption);

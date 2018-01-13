@@ -10,6 +10,9 @@ Parse.Cloud.afterSave("FoodieStory", function(request) {
   let reputableStory: ReputableStory;
   let story = request.object;
 
+  debugConsole.log(SeverityEnum.Verbose, "afterSave for storyID " + story.id);
+
+  // We'll just check the existance of a reputableStory object. But dont't access it! It's not yet fetched!
   if (!story.get(FoodieStory.reputationKey)) {
     reputableStory = new ReputableStory();
     reputableStory.initializeReputation(story, reputationScoreStoryMetricVer);

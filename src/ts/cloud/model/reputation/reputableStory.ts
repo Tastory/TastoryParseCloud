@@ -45,6 +45,12 @@ class ReputableStory extends Parse.Object {
   }
 
   // Property Accessors
+  getStoryId(): string {
+    let getValue = this.get(ReputableStory.storyIdKey);
+    if (getValue) { return getValue; }
+    else { return ""; }
+  }
+
   getScoreMetricVer(): number {
     let getValue = this.get(ReputableStory.scoreMetricVerKey);
     if (getValue) { return getValue; }
@@ -172,9 +178,12 @@ class ReputableStory extends Parse.Object {
   calculateStoryScore(): number {
     let scoringEngine = ScoreStoryMetric.scoreMetricVer[this.getScoreMetricVer()];
 
+    debugConsole.log(SeverityEnum.Verbose, "calculating Story Score");
+
     if (scoringEngine) {
       return scoringEngine.calculate(this.story, this);
     } else {
+      debugConsole.log(SeverityEnum.Warning, "Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
       return ScoreStoryMetric.defaultScore;
     }
   }

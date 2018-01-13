@@ -77,7 +77,7 @@ class ScoreStoryMetric {
 
     // Let's see how much Newness Boost there is
     // Boost Score = Newness Factor x 1/(2^time)
-    let newnessBoost = this.newnessFactor * 1/(2^(storyAge));
+    let newnessBoost = this.newnessFactor * 1/Math.pow(2, storyAge);
     debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
 
     // Let's calculate the Quality Component Score!!
@@ -119,11 +119,12 @@ class ScoreStoryMetric {
     debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
 
     // Apply Quality Decay Half Life
-    let decayedQuality = qualityComponent * 1/(2^(storyAge/this.decayHalfLife));
+    let decayedQuality = qualityComponent * 1/Math.pow(2, storyAge/this.decayHalfLife);
     debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
 
-    debugConsole.log(SeverityEnum.Verbose, "Total Quality Score for storyID: " + story.id + " = " + newnessBoost + decayedQuality);
-    return newnessBoost + decayedQuality;
+    let totalScore = newnessBoost + decayedQuality
+    debugConsole.log(SeverityEnum.Verbose, "Total Quality Score for storyID: " + story.id + " = " + totalScore);
+    return totalScore;
   }
 
   normalizeUsersViewed(usersViewed: number): number {

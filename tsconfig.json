@@ -2,7 +2,7 @@
   "compilerOptions": {
 
     "target": "ES6",
-    "module": "amd",
+    "module": "system",
     "rootDir": "./src/ts",
     "outFile": "./src/js/cloud/main.js",
     "strict": true,
