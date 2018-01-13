@@ -29,11 +29,11 @@ Parse.Cloud.job("hourlyReputationRecal", function(request, status) {
     recalNewerThanDate = new Date(currentDateInMs - msToRecalEveryWk);
     debugConsole.log(SeverityEnum.Info, "Weekly Recalculation Triggered");
   }
-  else if (currentDate.getHours() == 12) {
+  else if (currentDate.getUTCHours() == 12) {
     recalNewerThanDate = new Date(currentDateInMs - msToRecalEveryDay);
     debugConsole.log(SeverityEnum.Info, "Daily Recalculation Triggered");
   }
-  else if (currentDate.getHours() % 4 == 0) {
+  else if (currentDate.getUTCHours() % 4 == 0) {
     recalNewerThanDate = new Date(currentDateInMs - msToRecalEvery4Hrs);
     debugConsole.log(SeverityEnum.Info, "4 Hours Interval Recalculation Triggered");
   }
@@ -59,7 +59,7 @@ Parse.Cloud.job("hourlyReputationRecal", function(request, status) {
 
       if (reputableStory && reputableStory.isValid) {
         reputableStory.story = story;
-        story.set(FoodieStory.discoverabilityKey, reputableStory.calculateStoryScore());
+        // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputableStory.calculateStoryScore());
         storiesToSave.push(story);
       }
     }

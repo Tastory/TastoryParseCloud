@@ -13,7 +13,6 @@ class ScoreStoryMetric {
   static initialScore: number = 100;  // 90 on max Newness Boost + 10 on base quality score
   static defaultScore: number = 65;  // Random middle of the road score
 
-
   // MARK: - Public Properties
   baseScore: number;
   percentageLikedWeighting: number;
@@ -31,6 +30,7 @@ class ScoreStoryMetric {
   avgMomentNormalizeConstant: number;
   usersViewedNormalizeLogConstant: number;
 
+  logCalculationSteps: boolean = false;
 
   // MARK: - Constructor
   constructor(baseScore: number,
@@ -78,7 +78,9 @@ class ScoreStoryMetric {
     // Let's see how much Newness Boost there is
     // Boost Score = Newness Factor x 1/(2^time)
     let newnessBoost = this.newnessFactor * 1/Math.pow(2, storyAge);
-    debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
+    if (this.logCalculationSteps) {
+      debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
+    }
 
     // Let's calculate the Quality Component Score!!
     // User Views logarithmic normalization
@@ -86,7 +88,9 @@ class ScoreStoryMetric {
     let usersViewed = reputation.getUsersViewed();
     let usersViewedNormalized = 1 - 1/(Math.log(usersViewed + this.usersViewedNormalizeLogConstant) / Math.log(this.usersViewedNormalizeLogConstant));
     let usersViewedWeighted = this.usersViewedWeighting * usersViewedNormalized;
-    debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
+    if (this.logCalculationSteps) {
+      debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
+    }
 
     // Calculate the average number of Moments viewed
     let avgMomentsWeighted: number = 0;
@@ -101,7 +105,9 @@ class ScoreStoryMetric {
       // Moment number inverse normalization
       let avgMomentsNormalized = this.normalizeAvgMoment(avgMomentsViewed);
       avgMomentsWeighted = this.avgMomentWeighting * avgMomentsNormalized;
-      debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+      if (this.logCalculationSteps) {
+        debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+      }
 
       let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
       percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
@@ -125,11 +131,15 @@ class ScoreStoryMetric {
                            usersViewedWeighted +
                            avgMomentsWeighted;
 
-    debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
+    if (this.logCalculationSteps) {
+      debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
+    }
 
     // Apply Quality Decay Half Life
     let decayedQuality = qualityComponent * 1/Math.pow(2, storyAge/this.decayHalfLife);
-    debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
+    if (this.logCalculationSteps) {
+      debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
+    }
 
     let totalScore = newnessBoost + decayedQuality
     debugConsole.log(SeverityEnum.Verbose, "Total Quality Score for storyID: " + story.id + " = " + totalScore);

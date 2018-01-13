@@ -139,7 +139,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
       }).then(function(reputation) {
         reputation.story = story;  // Just in case
-        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+        // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
         story.set(FoodieStory.reputationKey, reputation);
         return story.save(null, masterKeyOption);
 
@@ -161,7 +161,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
 
       }).then(function(reputation) {
         reputation.story = story;  // Just in case
-        story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+        // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
         story.set(FoodieStory.reputationKey, reputation);
         return story.save(null, masterKeyOption);
 

@@ -194,7 +194,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
                 return reputableStory.save(null, masterKeyOption);
             }).then(function (reputation) {
                 reputation.story = story; // Just in case
-                story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+                // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
                 story.set(FoodieStory.reputationKey, reputation);
                 return story.save(null, masterKeyOption);
             }).then(function (story) {
@@ -211,7 +211,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
                 return reputableStory.save(null, masterKeyOption);
             }).then(function (reputation) {
                 reputation.story = story; // Just in case
-                story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
+                // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
                 story.set(FoodieStory.reputationKey, reputation);
                 return story.save(null, masterKeyOption);
             }).then(function (story) {
@@ -251,6 +251,8 @@ Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
     let currentDate = new Date(); // This is THE date sample
     let currentDateInMs = currentDate.getTime();
     let recalNewerThanDate;
+    debugConsole.log(SeverityEnum.Verbose, " UTC Day: " + currentDate.getUTCDay() + " UTC Hour: " + currentDate.getUTCHours());
+    debugConsole.log(SeverityEnum.Verbose, " Day: " + currentDate.getDay() + " Hour: " + currentDate.getHours());
     // Weekly Recal. Note that Monday 4am Pacific is Monday noon UTC
     if (currentDate.getUTCDay() == 1 && currentDate.getUTCHours() == 12) {
         recalNewerThanDate = new Date(currentDateInMs - msToRecalEveryWk);
@@ -281,7 +283,7 @@ Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
             let reputableStory = story.get(FoodieStory.reputationKey);
             if (reputableStory && reputableStory.isValid) {
                 reputableStory.story = story;
-                story.set(FoodieStory.discoverabilityKey, reputableStory.calculateStoryScore());
+                // Assume Recalculation will be performed in 'beforeSave' story.set(FoodieStory.discoverabilityKey, reputableStory.calculateStoryScore());
                 storiesToSave.push(story);
             }
         }
@@ -701,6 +703,7 @@ Parse.Object.registerSubclass("ReputableUser", ReputableUser);
 class ScoreStoryMetric {
     // MARK: - Constructor
     constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
+        this.logCalculationSteps = false;
         this.baseScore = baseScore;
         this.percentageLikedWeighting = percentageLikedWeighting;
         this.avgMomentWeighting = avgMomentWeighting;
@@ -725,14 +728,18 @@ class ScoreStoryMetric {
         // Let's see how much Newness Boost there is
         // Boost Score = Newness Factor x 1/(2^time)
         let newnessBoost = this.newnessFactor * 1 / Math.pow(2, storyAge);
-        debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
+        if (this.logCalculationSteps) {
+            debugConsole.log(SeverityEnum.Verbose, "Newness Boost for storyID: " + story.id + " = " + newnessBoost);
+        }
         // Let's calculate the Quality Component Score!!
         // User Views logarithmic normalization
         // User View Component Score = 1 - 1/log20(time + 20), where 20 is an example normalization constant
         let usersViewed = reputation.getUsersViewed();
         let usersViewedNormalized = 1 - 1 / (Math.log(usersViewed + this.usersViewedNormalizeLogConstant) / Math.log(this.usersViewedNormalizeLogConstant));
         let usersViewedWeighted = this.usersViewedWeighting * usersViewedNormalized;
-        debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
+        if (this.logCalculationSteps) {
+            debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
+        }
         // Calculate the average number of Moments viewed
         let avgMomentsWeighted = 0;
         let percentageLikedWeighted = 0;
@@ -744,7 +751,9 @@ class ScoreStoryMetric {
             // Moment number inverse normalization
             let avgMomentsNormalized = this.normalizeAvgMoment(avgMomentsViewed);
             avgMomentsWeighted = this.avgMomentWeighting * avgMomentsNormalized;
-            debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+            if (this.logCalculationSteps) {
+                debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+            }
             let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
             percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
             let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
@@ -762,10 +771,14 @@ class ScoreStoryMetric {
             percentageClickedVenueWeighted +
             usersViewedWeighted +
             avgMomentsWeighted;
-        debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
+        if (this.logCalculationSteps) {
+            debugConsole.log(SeverityEnum.Verbose, "Quality Component for storyID: " + story.id + " = " + qualityComponent);
+        }
         // Apply Quality Decay Half Life
         let decayedQuality = qualityComponent * 1 / Math.pow(2, storyAge / this.decayHalfLife);
-        debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
+        if (this.logCalculationSteps) {
+            debugConsole.log(SeverityEnum.Verbose, "Decayed Quality for storyID: " + story.id + " = " + decayedQuality);
+        }
         let totalScore = newnessBoost + decayedQuality;
         debugConsole.log(SeverityEnum.Verbose, "Total Quality Score for storyID: " + story.id + " = " + totalScore);
         return totalScore;
