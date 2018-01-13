@@ -10,8 +10,6 @@ Parse.Cloud.beforeSave("FoodieStory", function(request, response) {
   let story: FoodieStory = request.object;
   let reputation: ReputableStory = story.get(FoodieStory.reputationKey);
 
-
-
   if (reputation) {
     debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id + " with Reputation");
     reputation.fetch().then(

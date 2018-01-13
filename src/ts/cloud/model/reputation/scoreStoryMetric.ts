@@ -73,7 +73,7 @@ class ScoreStoryMetric {
     let currentTime: number = currentDate.getTime()/msInDay;
     let storyAge = currentTime - creationTime;  // This is in days
 
-    debugConsole.log(SeverityEnum.Verbose, "Quality Score Calculation timestamp: " + currentDate.toUTCString() + " in Days" + currentTime + ",  creationDays: " + creationTime);
+    debugConsole.log(SeverityEnum.Verbose, "Quality Score Calculation timestamp: " + currentDate.toUTCString() + " in Days " + currentTime + ",  creationDays: " + creationTime);
 
     // Let's see how much Newness Boost there is
     // Boost Score = Newness Factor x 1/(2^time)
@@ -89,23 +89,32 @@ class ScoreStoryMetric {
     debugConsole.log(SeverityEnum.Verbose, "Users Viewed Weighted for storyID: " + story.id + " = " + usersViewedWeighted);
 
     // Calculate the average number of Moments viewed
-    let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
-    // Moment number inverse normalization
-    let avgMomentsNormalized = this.normalizeAvgMoment(avgMomentsViewed);
-    let avgMomentsWeighted = this.avgMomentWeighting * avgMomentsNormalized;
-    debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
+    let avgMomentsWeighted: number = 0;
+    let percentageLikedWeighted: number = 0;
+    let percentageSwipedWeighted: number = 0;
+    let percentageClickedProfileWeighted: number = 0;
+    let percentageClickedVenueWeighted: number = 0;
 
-    let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
-    let percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
+    if (usersViewed != 0) {
+      let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
 
-    let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
-    let percentageSwipedWeighted = this.percentageSwipedWeighting * percentageSwiped;
+      // Moment number inverse normalization
+      let avgMomentsNormalized = this.normalizeAvgMoment(avgMomentsViewed);
+      avgMomentsWeighted = this.avgMomentWeighting * avgMomentsNormalized;
+      debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
 
-    let percentageClickedProfile = reputation.getUsersClickedProfile() / reputation.getUsersViewed();
-    let percentageClickedProfileWeighted = this.percentageClickedProfileWeighting * percentageClickedProfile;
+      let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
+      percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
 
-    let percentageClickedVenue = reputation.getUsersClickedVenue() / reputation.getUsersViewed();
-    let percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
+      let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
+      percentageSwipedWeighted = this.percentageSwipedWeighting * percentageSwiped;
+
+      let percentageClickedProfile = reputation.getUsersClickedProfile() / reputation.getUsersViewed();
+      percentageClickedProfileWeighted = this.percentageClickedProfileWeighting * percentageClickedProfile;
+
+      let percentageClickedVenue = reputation.getUsersClickedVenue() / reputation.getUsersViewed();
+      percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
+    }
 
     // Finally the Quality Component Score!!
     let qualityComponent = this.baseScore +
