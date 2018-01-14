@@ -67,6 +67,11 @@ class ScoreStoryMetric {
   // MARK: - Public Instance Properties
   calculate(story: FoodieStory, reputation: ReputableStory): number {
 
+    // HACK: !! Keep Hidden Posts Hidden !!
+    if (story.get(FoodieStory.discoverabilityKey) == 10) {
+      return 10
+    }
+
     const msInDay = 24 * 60 * 60 * 1000;
     let currentDate = new Date();
     let creationTime: number = story.createdAt.getTime()/msInDay;

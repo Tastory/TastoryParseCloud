@@ -251,18 +251,16 @@ Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
     let currentDate = new Date(); // This is THE date sample
     let currentDateInMs = currentDate.getTime();
     let recalNewerThanDate;
-    debugConsole.log(SeverityEnum.Verbose, " UTC Day: " + currentDate.getUTCDay() + " UTC Hour: " + currentDate.getUTCHours());
-    debugConsole.log(SeverityEnum.Verbose, " Day: " + currentDate.getDay() + " Hour: " + currentDate.getHours());
     // Weekly Recal. Note that Monday 4am Pacific is Monday noon UTC
     if (currentDate.getUTCDay() == 1 && currentDate.getUTCHours() == 12) {
         recalNewerThanDate = new Date(currentDateInMs - msToRecalEveryWk);
         debugConsole.log(SeverityEnum.Info, "Weekly Recalculation Triggered");
     }
-    else if (currentDate.getHours() == 12) {
+    else if (currentDate.getUTCHours() == 12) {
         recalNewerThanDate = new Date(currentDateInMs - msToRecalEveryDay);
         debugConsole.log(SeverityEnum.Info, "Daily Recalculation Triggered");
     }
-    else if (currentDate.getHours() % 4 == 0) {
+    else if (currentDate.getUTCHours() % 4 == 0) {
         recalNewerThanDate = new Date(currentDateInMs - msToRecalEvery4Hrs);
         debugConsole.log(SeverityEnum.Info, "4 Hours Interval Recalculation Triggered");
     }
@@ -719,6 +717,10 @@ class ScoreStoryMetric {
     }
     // MARK: - Public Instance Properties
     calculate(story, reputation) {
+        // HACK: !! Keep Hidden Posts Hidden !!
+        if (story.get(FoodieStory.discoverabilityKey) == 10) {
+            return 10;
+        }
         const msInDay = 24 * 60 * 60 * 1000;
         let currentDate = new Date();
         let creationTime = story.createdAt.getTime() / msInDay;
