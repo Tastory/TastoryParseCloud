@@ -273,6 +273,7 @@ Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
     query.include(FoodieStory.reputationKey);
     query.greaterThanOrEqualTo("createdAt", recalNewerThanDate);
     query.descending("createdAt");
+    query.limit(1000); // Make the limit 1000 for now. Perhaps later we gotta do some sort of paging recal
     query.find().then(function (stories) {
         let storiesToSave = [];
         debugConsole.log(SeverityEnum.Info, "Found " + stories.length + " Stories newer than " + recalNewerThanDate.toUTCString() + " for Reputation Recalculation");
