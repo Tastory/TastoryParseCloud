@@ -19,7 +19,7 @@ Parse.Cloud.beforeSave("FoodieStory", function(request, response) {
         response.success();
       },
       function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Unable to fetch ReputableStory for Story ID: " + story.id);
+        debugConsole.error("Unable to fetch ReputableStory for Story ID: " + story.id);
         story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.defaultScore);  // TODO: Initialize or Update Discoverability Score
         response.success();
       }

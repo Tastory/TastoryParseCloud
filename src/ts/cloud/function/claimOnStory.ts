@@ -17,12 +17,12 @@ Parse.Cloud.define("storyClaim", function(req, res) {
 
   } else if (req.master === true) {
     user = null;
-    debugConsole.log(SeverityEnum.Warning, "'storyClaim' called with master not yet supported!!");
+    debugConsole.error("'storyClaim' called with master not yet supported!!");
     res.error("User-less Claim via Master Key not yet supported");
     return;
 
   } else {
-    debugConsole.log(SeverityEnum.Warning, "'storyClaim' called with no source reporter!!");
+    debugConsole.error("'storyClaim' called with no source reporter!!");
     res.error("A source reporter is required to make a Reputation Claim against a Story");
     return;
   }
@@ -34,7 +34,7 @@ Parse.Cloud.define("storyClaim", function(req, res) {
   // Process the claim input
   claimInputForStory(reporterId, storyId, req.params, function(anyArg: any, errorMsg: string) {
     if (!anyArg) {
-      debugConsole.log(SeverityEnum.Warning, errorMsg);
+      debugConsole.error(errorMsg);
       res.error(errorMsg);
 
     } else {
@@ -149,7 +149,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       },
 
       function(error) {
-        debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+        debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
         callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
       });
     }
@@ -171,7 +171,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
       },
 
       function(error) {
-        debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+        debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
         callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
       });
     }
@@ -183,7 +183,7 @@ function claimInputForStory(reporterId: string, storyId: string, claimParameters
   },
 
   function(error) {
-    debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+    debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
     callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
   });
 }

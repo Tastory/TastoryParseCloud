@@ -26,7 +26,7 @@ Parse.Cloud.afterSave("FoodieStory", function(request) {
         debugConsole.log(SeverityEnum.Debug, "New Reputation ID: " + reputableStory.id + " created for Story ID: " + story.id);
       },
       function(error) {
-        debugConsole.log(SeverityEnum.Warning, "Failed to create Reputation for Story ID: " + story.id);
+        debugConsole.error("Failed to create Reputation for Story ID: " + story.id);
       }
     );
   }

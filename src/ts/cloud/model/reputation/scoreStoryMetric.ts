@@ -68,8 +68,8 @@ class ScoreStoryMetric {
   calculate(story: FoodieStory, reputation: ReputableStory): number {
 
     // HACK: !! Keep Hidden Posts Hidden !!
-    if (story.get(FoodieStory.discoverabilityKey) == 10) {
-      return 10
+    if (story.get(FoodieStory.discoverabilityKey) == 0) {
+      return 0
     }
 
     const msInDay = 24 * 60 * 60 * 1000;
@@ -115,15 +115,31 @@ class ScoreStoryMetric {
       }
 
       let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
+      if (percentageLiked > 1.0) {
+        debugConsole.error("PercentageLiked = " + percentageLiked + " exceeded 100%");
+        percentageLiked = Math.max(1.0, percentageLiked);
+      }
       percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
 
       let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
+      if (percentageSwiped > 1.0) {
+        debugConsole.error("PercentageSwiped = " + percentageSwiped + " exceeded 100%");
+        percentageSwiped = Math.max(1.0, percentageSwiped);
+      }
       percentageSwipedWeighted = this.percentageSwipedWeighting * percentageSwiped;
 
       let percentageClickedProfile = reputation.getUsersClickedProfile() / reputation.getUsersViewed();
+      if (percentageClickedProfile > 1.0) {
+        debugConsole.error("PercentageClickedProfile = " + percentageClickedProfile + " exceeded 100%");
+        percentageClickedProfile = Math.max(1.0, percentageClickedProfile);
+      }
       percentageClickedProfileWeighted = this.percentageClickedProfileWeighting * percentageClickedProfile;
 
       let percentageClickedVenue = reputation.getUsersClickedVenue() / reputation.getUsersViewed();
+      if (percentageClickedVenue > 1.0) {
+        debugConsole.error("PercentageClickedVenue = " + percentageClickedVenue + " exceeded 100%");
+        percentageClickedVenue = Math.max(1.0, percentageClickedVenue);
+      }
       percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
     }
 

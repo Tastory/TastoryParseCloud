@@ -55,9 +55,11 @@ class ReputableClaim extends Parse.Object {
     let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
 
     // ??? Should we enforce 1 reaction type per user?
-    let logSeverity = SeverityEnum.Verbose;
-    if (existingReactions.length > 1 || matchingReactions.length > 0) { logSeverity = SeverityEnum.Warning; }
-    debugConsole.log(logSeverity, "Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    if (existingReactions.length > 1 || matchingReactions.length > 0) {
+      debugConsole.error("Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    } else {
+      debugConsole.log(SeverityEnum.Verbose, "Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    }
 
     if (matchingReactions.length < 1) {
       // No matching reactions found, create a new reaction
@@ -81,9 +83,11 @@ class ReputableClaim extends Parse.Object {
     let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
 
     // ??? Should we enforce 1 reaction type per user?
-    let logSeverity = SeverityEnum.Verbose;
-    if (existingReactions.length > 1 || matchingReactions.length < 1) { logSeverity = SeverityEnum.Warning; }
-    debugConsole.log(logSeverity, "Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    if (existingReactions.length > 1 || matchingReactions.length < 1) {
+      debugConsole.error("Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    } else {
+      debugConsole.log(SeverityEnum.Verbose, "Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+    }
     return matchingReactions;
   }
 
@@ -96,9 +100,11 @@ class ReputableClaim extends Parse.Object {
                                                         claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.StoryAction &&
                                                         claim.get(ReputableClaim.storyActionTypeKey) === actionType));
 
-    let logSeverity = SeverityEnum.Verbose;
-    if (matchingClaims.length > 1) { logSeverity = SeverityEnum.Warning; }
-    debugConsole.log(logSeverity, "Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    if (matchingClaims.length > 1) {
+      debugConsole.error("Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    } else {
+      debugConsole.log(SeverityEnum.Verbose, "Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    }
 
     if (matchingClaims.length < 1) {
       // No matching reactions found, create a new reaction
@@ -120,9 +126,11 @@ class ReputableClaim extends Parse.Object {
     let matchingClaims = claimsHistory.filter(claim => (claim.get(ReputableClaim.claimTypeKey) === ReputationClaimTypeEnum.StoryClaim &&
                                                         claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.StoryViewed));
 
-    let logSeverity = SeverityEnum.Verbose;
-    if (matchingClaims.length > 1) { logSeverity = SeverityEnum.Warning }
-    debugConsole.log(logSeverity, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    if (matchingClaims.length > 1) {
+      debugConsole.error("Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    } else {
+      debugConsole.log(SeverityEnum.Verbose, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+    }
 
     if (matchingClaims.length < 1) {
       // No matching view claim found. Create a new one

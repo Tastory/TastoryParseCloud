@@ -183,7 +183,7 @@ class ReputableStory extends Parse.Object {
     if (scoringEngine) {
       return scoringEngine.calculate(this.story, this);
     } else {
-      debugConsole.log(SeverityEnum.Warning, "Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
+      debugConsole.error("Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
       return ScoreStoryMetric.defaultScore;
     }
   }

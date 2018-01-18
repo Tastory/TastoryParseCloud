@@ -28,7 +28,7 @@ Parse.Cloud.afterSave("FoodieStory", function (request) {
         }).then(function (story) {
             debugConsole.log(SeverityEnum.Debug, "New Reputation ID: " + reputableStory.id + " created for Story ID: " + story.id);
         }, function (error) {
-            debugConsole.log(SeverityEnum.Warning, "Failed to create Reputation for Story ID: " + story.id);
+            debugConsole.error("Failed to create Reputation for Story ID: " + story.id);
         });
     }
 });
@@ -49,7 +49,7 @@ Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
             story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
             response.success();
         }, function (error) {
-            debugConsole.log(SeverityEnum.Warning, "Unable to fetch ReputableStory for Story ID: " + story.id);
+            debugConsole.error("Unable to fetch ReputableStory for Story ID: " + story.id);
             story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.defaultScore); // TODO: Initialize or Update Discoverability Score
             response.success();
         });
@@ -85,12 +85,12 @@ Parse.Cloud.define("storyClaim", function (req, res) {
     }
     else if (req.master === true) {
         user = null;
-        debugConsole.log(SeverityEnum.Warning, "'storyClaim' called with master not yet supported!!");
+        debugConsole.error("'storyClaim' called with master not yet supported!!");
         res.error("User-less Claim via Master Key not yet supported");
         return;
     }
     else {
-        debugConsole.log(SeverityEnum.Warning, "'storyClaim' called with no source reporter!!");
+        debugConsole.error("'storyClaim' called with no source reporter!!");
         res.error("A source reporter is required to make a Reputation Claim against a Story");
         return;
     }
@@ -100,7 +100,7 @@ Parse.Cloud.define("storyClaim", function (req, res) {
     // Process the claim input
     claimInputForStory(reporterId, storyId, req.params, function (anyArg, errorMsg) {
         if (!anyArg) {
-            debugConsole.log(SeverityEnum.Warning, errorMsg);
+            debugConsole.error(errorMsg);
             res.error(errorMsg);
         }
         else {
@@ -201,7 +201,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
                 // Success!
                 callback(story.get(FoodieStory.reputationKey), "");
             }, function (error) {
-                debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+                debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
                 callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
             });
         }
@@ -218,7 +218,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
                 // Success!
                 callback(story.get(FoodieStory.reputationKey), "");
             }, function (error) {
-                debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+                debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
                 callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
             });
         }
@@ -227,10 +227,108 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
             callback(reputableStory, "");
         }
     }, function (error) {
-        debugConsole.log(SeverityEnum.Warning, "claimInputForStory() Failed - " + error.code + " " + error.message);
+        debugConsole.error("claimInputForStory() Failed - " + error.code + " " + error.message);
         callback(null, "claimInputForStory() Failed - " + error.code + " " + error.message);
     });
 }
+//
+//  radiusForMinStories.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+var QueryInitStoryEnum;
+//
+//  radiusForMinStories.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+(function (QueryInitStoryEnum) {
+    QueryInitStoryEnum["RadiusFound"] = "RadiusFound";
+})(QueryInitStoryEnum || (QueryInitStoryEnum = {}));
+Parse.Cloud.define("radiusForMinStories", function (req, res) {
+    debugConsole.log(SeverityEnum.Debug, "radiusForMinStories.ts ParseCloudFunction 'radiusForMinStories' triggered");
+    let radii = [0.5, 1.6, 6.5, 16.0, 40.0, 100.0]; // These numbers are in kms
+    let location = new Parse.GeoPoint(req.params.latitude, req.params.longitude);
+    let query = new Parse.Query(FoodieStory);
+    let venueQuery = new Parse.Query(FoodieVenue);
+    let minStories = req.params.minStories;
+    let foundStories = 0;
+    let radius = radii[0];
+    venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 0.5km
+    query.matchesQuery(FoodieStory.venueKey, venueQuery);
+    query.count().then(function (numStories) {
+        if (numStories >= minStories) {
+            foundStories = numStories;
+            return Promise.reject(QueryInitStoryEnum.RadiusFound);
+        }
+        else {
+            radius = radii[1];
+            venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 1.6km
+            query.matchesQuery(FoodieStory.venueKey, venueQuery);
+            return query.count();
+        }
+    }).then(function (numStories) {
+        if (numStories >= minStories) {
+            foundStories = numStories;
+            return Promise.reject(QueryInitStoryEnum.RadiusFound);
+        }
+        else {
+            radius = radii[2];
+            venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 6.5km
+            query.matchesQuery(FoodieStory.venueKey, venueQuery);
+            return query.count();
+        }
+    }).then(function (numStories) {
+        if (numStories >= minStories) {
+            foundStories = numStories;
+            return Promise.reject(QueryInitStoryEnum.RadiusFound);
+        }
+        else {
+            radius = radii[3];
+            venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 16km
+            query.matchesQuery(FoodieStory.venueKey, venueQuery);
+            return query.count();
+        }
+    }).then(function (numStories) {
+        if (numStories >= minStories) {
+            foundStories = numStories;
+            return Promise.reject(QueryInitStoryEnum.RadiusFound);
+        }
+        else {
+            radius = radii[4];
+            venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 40km
+            query.matchesQuery(FoodieStory.venueKey, venueQuery);
+            return query.count();
+        }
+    }).then(function (numStories) {
+        if (numStories >= minStories) {
+            foundStories = numStories;
+            return Promise.reject(QueryInitStoryEnum.RadiusFound);
+        }
+        else {
+            radius = radii[5];
+            venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 100km
+            query.matchesQuery(FoodieStory.venueKey, venueQuery);
+            return query.count();
+        }
+    }).then(function (numStories) {
+        debugConsole.log(SeverityEnum.Verbose, "radiusForMinStories of " + minStories + " found " + numStories + " stories at a search radius of " + radius);
+        res.success(radius); // Regardless of how many stories found, just return here anyways
+    }, function (error) {
+        if (error === QueryInitStoryEnum.RadiusFound) {
+            debugConsole.log(SeverityEnum.Verbose, "radiusForMinStories of " + minStories + " found " + foundStories + " stories at a search radius of " + radius);
+            res.success(radius);
+        }
+        else {
+            debugConsole.error("radiusForMinStories Failed - " + error.code + " " + error.message);
+            res.error("radiusForMinStories Failed - " + error.code + " " + error.message);
+        }
+    });
+});
 //
 //  recalStoryReputation.ts
 //  TastoryParseCloud
@@ -313,8 +411,24 @@ class FoodieStory extends Parse.Object {
     }
 }
 FoodieStory.reputationKey = "reputation";
+FoodieStory.venueKey = "venue";
+FoodieStory.authorKey = "author;";
 FoodieStory.discoverabilityKey = "discoverability";
 Parse.Object.registerSubclass("FoodieStory", FoodieStory);
+//
+//  foodieVenue.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-01-04
+//  Copyright © 2018 Tastry. All rights reserved.
+//
+class FoodieVenue extends Parse.Object {
+    constructor() {
+        super("FoodieVenue");
+    }
+}
+FoodieVenue.locationKey = "location";
+Parse.Object.registerSubclass("FoodieVenue", FoodieVenue);
 //
 //  reputableClaim.ts
 //  TastoryParseCloud
@@ -363,11 +477,12 @@ class ReputableClaim extends Parse.Object {
             claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.Reaction));
         let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
         // ??? Should we enforce 1 reaction type per user?
-        let logSeverity = SeverityEnum.Verbose;
         if (existingReactions.length > 1 || matchingReactions.length > 0) {
-            logSeverity = SeverityEnum.Warning;
+            debugConsole.error("Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
         }
-        debugConsole.log(logSeverity, "Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        else {
+            debugConsole.log(SeverityEnum.Verbose, "Set reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        }
         if (matchingReactions.length < 1) {
             // No matching reactions found, create a new reaction
             let claim = new ReputableClaim();
@@ -386,11 +501,12 @@ class ReputableClaim extends Parse.Object {
             claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.Reaction));
         let matchingReactions = existingReactions.filter(reaction => (reaction.get(ReputableClaim.storyReactionTypeKey) === reactionType));
         // ??? Should we enforce 1 reaction type per user?
-        let logSeverity = SeverityEnum.Verbose;
         if (existingReactions.length > 1 || matchingReactions.length < 1) {
-            logSeverity = SeverityEnum.Warning;
+            debugConsole.error("Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
         }
-        debugConsole.log(logSeverity, "Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        else {
+            debugConsole.log(SeverityEnum.Verbose, "Clear reaction type " + reactionType + " for storyID: " + storyId + " found " + existingReactions.length + " reactions & " + matchingReactions.length + " matches");
+        }
         return matchingReactions;
     }
     static createStoryActionIfNotFound(reporterId, storyId, actionType, claimsHistory) {
@@ -399,11 +515,12 @@ class ReputableClaim extends Parse.Object {
         let matchingClaims = claimsHistory.filter(claim => (claim.get(ReputableClaim.claimTypeKey) === ReputationClaimTypeEnum.StoryClaim &&
             claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.StoryAction &&
             claim.get(ReputableClaim.storyActionTypeKey) === actionType));
-        let logSeverity = SeverityEnum.Verbose;
         if (matchingClaims.length > 1) {
-            logSeverity = SeverityEnum.Warning;
+            debugConsole.error("Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
         }
-        debugConsole.log(logSeverity, "Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        else {
+            debugConsole.log(SeverityEnum.Verbose, "Set action type " + actionType + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        }
         if (matchingClaims.length < 1) {
             // No matching reactions found, create a new reaction
             let claim = new ReputableClaim();
@@ -420,11 +537,12 @@ class ReputableClaim extends Parse.Object {
         // Look at the claims history for already set reactions
         let matchingClaims = claimsHistory.filter(claim => (claim.get(ReputableClaim.claimTypeKey) === ReputationClaimTypeEnum.StoryClaim &&
             claim.get(ReputableClaim.storyClaimTypeKey) === StoryClaimTypeEnum.StoryViewed));
-        let logSeverity = SeverityEnum.Verbose;
         if (matchingClaims.length > 1) {
-            logSeverity = SeverityEnum.Warning;
+            debugConsole.error("Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
         }
-        debugConsole.log(logSeverity, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        else {
+            debugConsole.log(SeverityEnum.Verbose, "Set moment number to " + momentNumber + " for storyID: " + storyId + " found " + matchingClaims.length + " matches");
+        }
         if (matchingClaims.length < 1) {
             // No matching view claim found. Create a new one
             let claim = new ReputableClaim();
@@ -651,7 +769,7 @@ class ReputableStory extends Parse.Object {
             return scoringEngine.calculate(this.story, this);
         }
         else {
-            debugConsole.log(SeverityEnum.Warning, "Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
+            debugConsole.error("Unable to get Scoring Metric Ver: " + this.getScoreMetricVer());
             return ScoreStoryMetric.defaultScore;
         }
     }
@@ -719,8 +837,8 @@ class ScoreStoryMetric {
     // MARK: - Public Instance Properties
     calculate(story, reputation) {
         // HACK: !! Keep Hidden Posts Hidden !!
-        if (story.get(FoodieStory.discoverabilityKey) == 10) {
-            return 10;
+        if (story.get(FoodieStory.discoverabilityKey) == 0) {
+            return 0;
         }
         const msInDay = 24 * 60 * 60 * 1000;
         let currentDate = new Date();
@@ -758,12 +876,28 @@ class ScoreStoryMetric {
                 debugConsole.log(SeverityEnum.Verbose, "Avg Moments Weighted for storyID: " + story.id + " = " + avgMomentsWeighted);
             }
             let percentageLiked = reputation.getUsersLiked() / reputation.getUsersViewed();
+            if (percentageLiked > 1.0) {
+                debugConsole.error("PercentageLiked = " + percentageLiked + " exceeded 100%");
+                percentageLiked = Math.max(1.0, percentageLiked);
+            }
             percentageLikedWeighted = this.percentageLikedWeighting * percentageLiked;
             let percentageSwiped = reputation.getUsersSwipedUp() / reputation.getUsersViewed();
+            if (percentageSwiped > 1.0) {
+                debugConsole.error("PercentageSwiped = " + percentageSwiped + " exceeded 100%");
+                percentageSwiped = Math.max(1.0, percentageSwiped);
+            }
             percentageSwipedWeighted = this.percentageSwipedWeighting * percentageSwiped;
             let percentageClickedProfile = reputation.getUsersClickedProfile() / reputation.getUsersViewed();
+            if (percentageClickedProfile > 1.0) {
+                debugConsole.error("PercentageClickedProfile = " + percentageClickedProfile + " exceeded 100%");
+                percentageClickedProfile = Math.max(1.0, percentageClickedProfile);
+            }
             percentageClickedProfileWeighted = this.percentageClickedProfileWeighting * percentageClickedProfile;
             let percentageClickedVenue = reputation.getUsersClickedVenue() / reputation.getUsersViewed();
+            if (percentageClickedVenue > 1.0) {
+                debugConsole.error("PercentageClickedVenue = " + percentageClickedVenue + " exceeded 100%");
+                percentageClickedVenue = Math.max(1.0, percentageClickedVenue);
+            }
             percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
         }
         // Finally the Quality Component Score!!
