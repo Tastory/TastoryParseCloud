@@ -4,7 +4,7 @@
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 console.log("Tastory Parse Cloud Code main.js Running");
 //
@@ -12,7 +12,7 @@ console.log("Tastory Parse Cloud Code main.js Running");
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 Parse.Cloud.afterSave("FoodieStory", function (request) {
     let reputableStory;
@@ -37,26 +37,48 @@ Parse.Cloud.afterSave("FoodieStory", function (request) {
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
     let story = request.object;
     let reputation = story.get(FoodieStory.reputationKey);
+    // Force update of Discoverability Score
     if (reputation) {
         debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id + " with Reputation");
         reputation.fetch().then(function (reputableStory) {
-            reputableStory.story = story; // Important!!! This handle is not auto populated by Parse. Always manuall populate on retrieve!!
+            reputableStory.story = story; // Important!!! This handle is not auto populated by Parse. Always manually populate on retrieve!!
             story.set(FoodieStory.discoverabilityKey, reputation.calculateStoryScore());
             response.success();
         }, function (error) {
             debugConsole.error("Unable to fetch ReputableStory for Story ID: " + story.id);
-            story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.defaultScore); // TODO: Initialize or Update Discoverability Score
+            story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.defaultScore);
             response.success();
         });
     }
     else {
         debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id + " without Reputation");
-        story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore); // TODO: Initialize or Update Discoverability Score
+        // Check for Story Validity, Respond with error if deemed Invalid
+        // A valid story must have a Title, a Venue and at least 3 Moments
+        let title = story.get(FoodieStory.titleKey);
+        if (title) {
+            title = title.trim();
+        }
+        let venue = story.get(FoodieStory.venueKey);
+        let moments = story.get(FoodieStory.momentsKey);
+        if (!title) {
+            response.error("Required fields empty - The Title and Venue are essential to a Story!");
+            return;
+        }
+        if (!venue) {
+            response.error("Required fields empty - The Title and Venue are essential to a Story!");
+            return;
+        }
+        if (!moments || moments.length < 3) {
+            response.error("Your Story looks incomplete. Try adding at least 3 Moments.");
+            return;
+        }
+        story.set(FoodieStory.titleKey, title);
+        story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore);
         response.success();
     }
 });
@@ -65,7 +87,7 @@ Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 const masterKeyOption = { useMasterKey: true };
 var reputationScoreStoryMetricVer = 1;
@@ -74,7 +96,7 @@ var reputationScoreStoryMetricVer = 1;
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 Parse.Cloud.define("storyClaim", function (req, res) {
     debugConsole.log(SeverityEnum.Debug, "claimOnStory.ts ParseCloudFunction 'storyClaim' triggered");
@@ -236,7 +258,7 @@ function claimInputForStory(reporterId, storyId, claimParameters, callback) {
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 var QueryInitStoryEnum;
 //
@@ -244,7 +266,7 @@ var QueryInitStoryEnum;
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 (function (QueryInitStoryEnum) {
     QueryInitStoryEnum["RadiusFound"] = "RadiusFound";
@@ -334,7 +356,7 @@ Parse.Cloud.define("radiusForMinStories", function (req, res) {
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-12
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
     // MARK: - Constants
@@ -399,28 +421,42 @@ Parse.Cloud.job("hourlyReputationRecal", function (request, status) {
     });
 });
 //
+//  foodieMoment.ts
+//  TastoryParseCloud
+//
+//  Created by Howard Lee on 2018-02-07
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
+//
+class FoodieMoment extends Parse.Object {
+    constructor() {
+        super("FoodieMoment");
+    }
+}
+Parse.Object.registerSubclass("FoodieMoment", FoodieMoment);
+//
 //  foodieStory.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 class FoodieStory extends Parse.Object {
     constructor() {
         super("FoodieStory");
     }
 }
-FoodieStory.reputationKey = "reputation";
+FoodieStory.titleKey = "title";
+FoodieStory.momentsKey = "moments";
 FoodieStory.venueKey = "venue";
-FoodieStory.authorKey = "author;";
 FoodieStory.discoverabilityKey = "discoverability";
+FoodieStory.reputationKey = "reputation";
 Parse.Object.registerSubclass("FoodieStory", FoodieStory);
 //
 //  foodieVenue.ts
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 class FoodieVenue extends Parse.Object {
     constructor() {
@@ -434,7 +470,7 @@ Parse.Object.registerSubclass("FoodieVenue", FoodieVenue);
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 var ReputationClaimTypeEnum;
 //
@@ -442,7 +478,7 @@ var ReputationClaimTypeEnum;
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 (function (ReputationClaimTypeEnum) {
     ReputationClaimTypeEnum["StoryClaim"] = "storyClaim";
@@ -600,7 +636,7 @@ Parse.Object.registerSubclass("ReputableClaim", ReputableClaim);
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 class ReputableStory extends Parse.Object {
     // MARK: - Constructor
@@ -802,7 +838,7 @@ Parse.Object.registerSubclass("ReputableStory", ReputableStory);
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 class ReputableUser extends Parse.Object {
     constructor() {
@@ -815,7 +851,7 @@ Parse.Object.registerSubclass("ReputableUser", ReputableUser);
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 class ScoreStoryMetric {
     // MARK: - Constructor
@@ -951,7 +987,7 @@ ScoreStoryMetric.scoreMetricVer = [
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 /* !!! Define Severity Enum here !!! */
 var SeverityEnum;
@@ -960,7 +996,7 @@ var SeverityEnum;
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 /* !!! Define Severity Enum here !!! */
 (function (SeverityEnum) {

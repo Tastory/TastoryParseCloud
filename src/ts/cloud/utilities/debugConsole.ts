@@ -3,7 +3,7 @@
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-05
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 
 /* !!! Define Severity Enum here !!! */

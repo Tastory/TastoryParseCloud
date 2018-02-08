@@ -3,15 +3,16 @@
 //  TastoryParseCloud
 //
 //  Created by Howard Lee on 2018-01-04
-//  Copyright © 2018 Tastry. All rights reserved.
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
 //
 
 class FoodieStory extends Parse.Object {
 
-  static reputationKey: string = "reputation";
+  static titleKey: string = "title";
+  static momentsKey: string = "moments";
   static venueKey: string = "venue";
-  static authorKey: string = "author;"
   static discoverabilityKey: string = "discoverability";
+  static reputationKey: string = "reputation";
 
   constructor() {
     super("FoodieStory");
