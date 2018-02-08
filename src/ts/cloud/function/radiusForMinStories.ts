@@ -26,6 +26,8 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
 
   venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 0.5km
   query.matchesQuery(FoodieStory.venueKey, venueQuery);
+  query.equalTo(FoodieStory.discoverableKey, true);
+  query.greaterThan(FoodieStory.discoverabilityKey, 0);
 
   query.count().then(function(numStories) {
     if (numStories >= minStories) {

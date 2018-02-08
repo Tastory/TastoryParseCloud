@@ -56,6 +56,7 @@ Parse.Cloud.beforeSave("FoodieStory", function(request, response) {
     }
 
     story.set(FoodieStory.titleKey, title);
+    story.set(FoodieStory.discoverableKey, true);
     story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore);
     response.success();
   }

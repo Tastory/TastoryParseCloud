@@ -78,6 +78,7 @@ Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
             return;
         }
         story.set(FoodieStory.titleKey, title);
+        story.set(FoodieStory.discoverableKey, true);
         story.set(FoodieStory.discoverabilityKey, ScoreStoryMetric.initialScore);
         response.success();
     }
@@ -282,6 +283,8 @@ Parse.Cloud.define("radiusForMinStories", function (req, res) {
     let radius = radii[0];
     venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 0.5km
     query.matchesQuery(FoodieStory.venueKey, venueQuery);
+    query.equalTo(FoodieStory.discoverableKey, true);
+    query.greaterThan(FoodieStory.discoverabilityKey, 0);
     query.count().then(function (numStories) {
         if (numStories >= minStories) {
             foundStories = numStories;
@@ -448,6 +451,7 @@ class FoodieStory extends Parse.Object {
 FoodieStory.titleKey = "title";
 FoodieStory.momentsKey = "moments";
 FoodieStory.venueKey = "venue";
+FoodieStory.discoverableKey = "discoverable";
 FoodieStory.discoverabilityKey = "discoverability";
 FoodieStory.reputationKey = "reputation";
 Parse.Object.registerSubclass("FoodieStory", FoodieStory);
