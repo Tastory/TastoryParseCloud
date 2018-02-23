@@ -536,6 +536,7 @@ var StoryActionTypeEnum;
     StoryActionTypeEnum[StoryActionTypeEnum["Swiped"] = 1] = "Swiped";
     StoryActionTypeEnum[StoryActionTypeEnum["Venue"] = 2] = "Venue";
     StoryActionTypeEnum[StoryActionTypeEnum["Profile"] = 3] = "Profile";
+    StoryActionTypeEnum[StoryActionTypeEnum["Shared"] = 4] = "Shared";
 })(StoryActionTypeEnum || (StoryActionTypeEnum = {}));
 ;
 class ReputableClaim extends Parse.Object {
@@ -690,6 +691,7 @@ class ReputableStory extends Parse.Object {
         this.set(ReputableStory.usersSwipedUpKey, 0);
         this.set(ReputableStory.usersClickedVenueKey, 0);
         this.set(ReputableStory.usersClickedProfileKey, 0);
+        this.set(ReputableStory.usersSharedKey, 0);
         this.set(ReputableStory.totalMomentNumberKey, 0);
         this.set(ReputableStory.totalViewsKey, 0);
     }
@@ -757,6 +759,15 @@ class ReputableStory extends Parse.Object {
             return 0;
         }
     }
+    getUsersShared() {
+        let getValue = this.get(ReputableStory.usersSharedKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
     getTotalMomentNumber() {
         let getValue = this.get(ReputableStory.totalMomentNumberKey);
         if (getValue) {
@@ -808,6 +819,8 @@ class ReputableStory extends Parse.Object {
             case StoryActionTypeEnum.Profile:
                 this.incUsersClickedProfile();
                 break;
+            case StoryActionTypeEnum.Shared:
+                this.incUsersShared();
         }
     }
     incUsersSwipedUp() {
@@ -818,6 +831,9 @@ class ReputableStory extends Parse.Object {
     }
     incUsersClickedProfile() {
         this.increment(ReputableStory.usersClickedProfileKey);
+    }
+    incUsersShared() {
+        this.increment(ReputableStory.usersSharedKey);
     }
     // View Counts
     incUsersViewed() {
@@ -855,6 +871,7 @@ class ReputableStory extends Parse.Object {
             "\n" + ReputableStory.usersSwipedUpKey + ": " + this.getUsersSwipedUp() +
             "\n" + ReputableStory.usersClickedVenueKey + ": " + this.getUsersClickedVenue() +
             "\n" + ReputableStory.usersClickedProfileKey + ": " + this.getUsersClickedProfile() +
+            "\n" + ReputableStory.usersSharedKey + ": " + this.getUsersShared() +
             "\n" + ReputableStory.totalMomentNumberKey + ": " + this.getTotalMomentNumber() +
             "\n" + ReputableStory.totalViewsKey + ": " + this.getTotalViews());
     }
@@ -867,6 +884,7 @@ ReputableStory.usersLikedKey = "usersLiked";
 ReputableStory.usersSwipedUpKey = "usersSwipedUp";
 ReputableStory.usersClickedVenueKey = "usersClickedVenue";
 ReputableStory.usersClickedProfileKey = "usersClickedProfile";
+ReputableStory.usersSharedKey = "usersShared";
 ReputableStory.totalMomentNumberKey = "totalMomentNumber";
 ReputableStory.totalViewsKey = "totalViews";
 Parse.Object.registerSubclass("ReputableStory", ReputableStory);
@@ -892,7 +910,7 @@ Parse.Object.registerSubclass("ReputableUser", ReputableUser);
 //
 class ScoreStoryMetric {
     // MARK: - Constructor
-    constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
+    constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, percentageSharedWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
         this.logCalculationSteps = false;
         this.baseScore = baseScore;
         this.percentageLikedWeighting = percentageLikedWeighting;
@@ -901,6 +919,7 @@ class ScoreStoryMetric {
         this.percentageSwipedWeighting = percentageSwipedWeighting;
         this.percentageClickedProfileWeighting = percentageClickedProfileWeighting;
         this.percentageClickedVenueWeighting = percentageClickedVenueWeighting;
+        this.percentageSharedWeighting = percentageSharedWeighting;
         this.newnessFactor = newnessFactor;
         this.newnessHalfLife = newnessHalfLife;
         this.decayHalfLife = decayHalfLife;
@@ -940,6 +959,7 @@ class ScoreStoryMetric {
         let percentageSwipedWeighted = 0;
         let percentageClickedProfileWeighted = 0;
         let percentageClickedVenueWeighted = 0;
+        let percentageSharedWeighted = 0;
         if (usersViewed != 0) {
             let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
             // Moment number inverse normalization
@@ -972,6 +992,12 @@ class ScoreStoryMetric {
                 percentageClickedVenue = Math.max(1.0, percentageClickedVenue);
             }
             percentageClickedVenueWeighted = this.percentageClickedVenueWeighting * percentageClickedVenue;
+            let percentageShared = reputation.getUsersShared() / reputation.getUsersViewed();
+            if (percentageShared > 1.0) {
+                debugConsole.error("PercentageShared = " + percentageShared + " exceeded 100%");
+                percentageShared = Math.max(1.0, percentageShared);
+            }
+            percentageSharedWeighted = this.percentageSharedWeighting * percentageShared;
         }
         // Finally the Quality Component Score!!
         let qualityComponent = this.baseScore +
@@ -979,6 +1005,7 @@ class ScoreStoryMetric {
             percentageSwipedWeighted +
             percentageClickedProfileWeighted +
             percentageClickedVenueWeighted +
+            percentageSharedWeighted +
             usersViewedWeighted +
             avgMomentsWeighted;
         if (this.logCalculationSteps) {
@@ -1013,6 +1040,7 @@ ScoreStoryMetric.scoreMetricVer = [
     20, // percentageSwipedWeighting: number;
     10, // percentageClickedProfileWeighting: number;
     10, // percentageClickedVenueWeighting: number;
+    30, // percentageSharedWeighting: number;
     90, // newnessFactor: number;
     1.0, // newnessHalfLife: number; (in days)
     120, // decayHalfLife: number; (in days)

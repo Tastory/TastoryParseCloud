@@ -16,6 +16,7 @@ class ReputableStory extends Parse.Object {
   static usersSwipedUpKey: string = "usersSwipedUp";
   static usersClickedVenueKey: string = "usersClickedVenue";
   static usersClickedProfileKey: string = "usersClickedProfile";
+  static usersSharedKey: string = "usersShared";
   static totalMomentNumberKey: string = "totalMomentNumber";
   static totalViewsKey: string = "totalViews";
 
@@ -40,6 +41,7 @@ class ReputableStory extends Parse.Object {
     this.set(ReputableStory.usersSwipedUpKey, 0);
     this.set(ReputableStory.usersClickedVenueKey, 0);
     this.set(ReputableStory.usersClickedProfileKey, 0);
+    this.set(ReputableStory.usersSharedKey, 0);
     this.set(ReputableStory.totalMomentNumberKey, 0);
     this.set(ReputableStory.totalViewsKey, 0);
   }
@@ -83,6 +85,12 @@ class ReputableStory extends Parse.Object {
 
   getUsersClickedProfile(): number {
     let getValue = this.get(ReputableStory.usersClickedProfileKey);
+    if (getValue) { return getValue; }
+    else { return 0; }
+  }
+
+  getUsersShared(): number {
+    let getValue = this.get(ReputableStory.usersSharedKey);
     if (getValue) { return getValue; }
     else { return 0; }
   }
@@ -139,6 +147,8 @@ class ReputableStory extends Parse.Object {
       case StoryActionTypeEnum.Profile:
         this.incUsersClickedProfile();
         break;
+      case StoryActionTypeEnum.Shared:
+        this.incUsersShared();
       // For future reaction types
     }
   }
@@ -153,6 +163,10 @@ class ReputableStory extends Parse.Object {
 
   incUsersClickedProfile() {
     this.increment(ReputableStory.usersClickedProfileKey);
+  }
+
+  incUsersShared() {
+    this.increment(ReputableStory.usersSharedKey);
   }
 
   // View Counts
@@ -197,6 +211,7 @@ class ReputableStory extends Parse.Object {
                                "\n" + ReputableStory.usersSwipedUpKey + ": " + this.getUsersSwipedUp() +
                                "\n" + ReputableStory.usersClickedVenueKey + ": " + this.getUsersClickedVenue() +
                                "\n" + ReputableStory.usersClickedProfileKey + ": " + this.getUsersClickedProfile() +
+                               "\n" + ReputableStory.usersSharedKey + ": " + this.getUsersShared() +
                                "\n" + ReputableStory.totalMomentNumberKey + ": " + this.getTotalMomentNumber() +
                                "\n" + ReputableStory.totalViewsKey + ": " + this.getTotalViews());
   }
