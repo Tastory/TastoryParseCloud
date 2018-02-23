@@ -14,13 +14,13 @@ enum QueryInitStoryEnum {
 Parse.Cloud.define("radiusForMinStories", function(req, res) {
   debugConsole.log(SeverityEnum.Debug, "radiusForMinStories.ts ParseCloudFunction 'radiusForMinStories' triggered");
 
-  let radii: number[] = [0.5, 1.6, 6.5, 16.0, 40.0, 100.0];  // These numbers are in kms
+  let radii: number[] = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 100.0];  // These numbers are in kms
 
   let location = new Parse.GeoPoint(req.params.latitude, req.params.longitude);
   let query = new Parse.Query(FoodieStory);
   let venueQuery = new Parse.Query(FoodieVenue);
 
-  let minStories = req.params.minStories;
+  let minStories = 10.0 //req.params.minStories;
   let foundStories = 0;
   let radius = radii[0];
 
@@ -36,7 +36,7 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
 
     } else {
       radius = radii[1];
-      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 1.6km
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 1.0km
       query.matchesQuery(FoodieStory.venueKey, venueQuery);
 
       return query.count();
@@ -49,7 +49,7 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
 
     } else {
       radius = radii[2];
-      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 6.5km
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 2.0km
       query.matchesQuery(FoodieStory.venueKey, venueQuery);
 
       return query.count();
@@ -61,7 +61,7 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
       return Promise.reject(QueryInitStoryEnum.RadiusFound);
     } else {
       radius = radii[3];
-      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 16km
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 4.0km
       query.matchesQuery(FoodieStory.venueKey, venueQuery);
 
       return query.count();
@@ -73,7 +73,7 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
       return Promise.reject(QueryInitStoryEnum.RadiusFound);
     } else {
       radius = radii[4];
-      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 40km
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 8.0km
       query.matchesQuery(FoodieStory.venueKey, venueQuery);
 
       return query.count();
@@ -85,12 +85,47 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
       return Promise.reject(QueryInitStoryEnum.RadiusFound);
     } else {
       radius = radii[5];
-      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 100km
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 16km
       query.matchesQuery(FoodieStory.venueKey, venueQuery);
 
       return query.count();
     }
 
+  }).then(function(numStories) {
+    if (numStories >= minStories) {
+      foundStories = numStories;
+      return Promise.reject(QueryInitStoryEnum.RadiusFound);
+    } else {
+      radius = radii[6];
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 32km
+      query.matchesQuery(FoodieStory.venueKey, venueQuery);
+
+      return query.count();
+    }
+
+  }).then(function(numStories) {
+    if (numStories >= minStories) {
+      foundStories = numStories;
+      return Promise.reject(QueryInitStoryEnum.RadiusFound);
+    } else {
+      radius = radii[7];
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 64km
+      query.matchesQuery(FoodieStory.venueKey, venueQuery);
+
+      return query.count();
+    }
+
+  }).then(function(numStories) {
+    if (numStories >= minStories) {
+      foundStories = numStories;
+      return Promise.reject(QueryInitStoryEnum.RadiusFound);
+    } else {
+      radius = radii[8];
+      venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 100km
+      query.matchesQuery(FoodieStory.venueKey, venueQuery);
+
+      return query.count();
+    }
   }).then(function(numStories) {
     debugConsole.log(SeverityEnum.Verbose, "radiusForMinStories of " + minStories + " found " + numStories + " stories at a search radius of " + radius);
     res.success(radius);  // Regardless of how many stories found, just return here anyways
