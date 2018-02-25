@@ -14,17 +14,20 @@ Parse.Cloud.define("universalSearch", function(req, res) {
 
   let queryFullName = new Parse.Query(FoodieUser)
   let queryUserName = new Parse.Query(FoodieUser)
-  let queryTitle = new Parse.Query(FoodieStory)
-	 
+  let queryStory = new Parse.Query(FoodieStory)
+	let queryVenue = new Parse.Query(FoodieVenue)
+
   queryFullName.matches("fullName", searchTerm, "i")	
   queryUserName.matches("username", searchTerm , "i")
-  queryTitle.matches("title", searchTerm, "i")
+  queryStory.matches("title", searchTerm, "i")
+  queryVenue.matches("name", searchTerm, "i")
   
   let userQuery = Parse.Query.or(queryFullName, queryUserName)
 
   // limit to 3 results for each category
   userQuery.limit(3)
-  queryTitle.limit(3)
+  queryStory.limit(3)
+  queryVenue.limit(3)
 
   var searchResults:Parse.Object[] = []
 
@@ -37,22 +40,32 @@ Parse.Cloud.define("universalSearch", function(req, res) {
       let users: FoodieUser[] = results
 
       for (let user of users) {
-        var objStr = JSON.stringify(user)
-        debugConsole.log(SeverityEnum.Debug, objStr)
+        //var objStr = JSON.stringify(user)
+        //debugConsole.log(SeverityEnum.Debug, objStr)
         searchResults.push(user)
       }
 
-      return queryTitle.find()
+      return queryStory.find()
     }).then(
     function(results){
       debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " stories");
       let stories: FoodieStory[] = results
 
        for (let story of stories) {
-        var objStr = JSON.stringify(story)
-        debugConsole.log(SeverityEnum.Debug, objStr)
+        //var objStr = JSON.stringify(story)
+        //debugConsole.log(SeverityEnum.Debug, objStr)
         searchResults.push(story)
       }
+
+      return queryVenue.find()
+    }).then(
+    function(results){
+      debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " venues");
+      let venues: FoodieVenue[] = results
+       for (let venue of venues) {
+        searchResults.push(venue)
+       }
+       //searchResults.concat(venues)
       res.success(searchResults)
     }, 
     function(error){
