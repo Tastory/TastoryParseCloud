@@ -19,7 +19,7 @@ Parse.Cloud.define("universalSearch", function(req, res) {
 
   queryFullName.matches("fullName", searchTerm, "i")	
   queryUserName.matches("username", searchTerm , "i")
-  queryStory.matches("title", searchTerm, "i")
+  queryStory.matches("title", searchTerm, "i").include("venue").include("author")
   queryVenue.matches("name", searchTerm, "i")
   
   let userQuery = Parse.Query.or(queryFullName, queryUserName)
@@ -40,8 +40,6 @@ Parse.Cloud.define("universalSearch", function(req, res) {
       let users: FoodieUser[] = results
 
       for (let user of users) {
-        //var objStr = JSON.stringify(user)
-        //debugConsole.log(SeverityEnum.Debug, objStr)
         searchResults.push(user)
       }
 
@@ -52,8 +50,6 @@ Parse.Cloud.define("universalSearch", function(req, res) {
       let stories: FoodieStory[] = results
 
        for (let story of stories) {
-        //var objStr = JSON.stringify(story)
-        //debugConsole.log(SeverityEnum.Debug, objStr)
         searchResults.push(story)
       }
 
@@ -65,7 +61,6 @@ Parse.Cloud.define("universalSearch", function(req, res) {
        for (let venue of venues) {
         searchResults.push(venue)
        }
-       //searchResults.concat(venues)
       res.success(searchResults)
     }, 
     function(error){
