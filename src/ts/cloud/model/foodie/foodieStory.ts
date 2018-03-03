@@ -11,6 +11,7 @@ class FoodieStory extends Parse.Object {
   static titleKey: string = "title";
   static momentsKey: string = "moments";
   static venueKey: string = "venue";
+  static authorKey: string = "author";
   static discoverableKey: string = "discoverable";
   static discoverabilityKey: string = "discoverability";
   static reputationKey: string = "reputation";
