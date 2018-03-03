@@ -28,6 +28,6 @@ enum FoodieRoleLevel {
 
 class FoodieRole extends Parse.Role {
 
-  static defaultDiscoverableLevel: number = 20;
+  static defaultDiscoverableLevel: number = 20;  // 20 or higher is visible
   static levelKey: string = "level";
 }

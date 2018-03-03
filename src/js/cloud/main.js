@@ -84,21 +84,18 @@ Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
         let overDiscoverableLevel = false;
         let query = new Parse.Query(Parse.Role);
         query.find().then(function (roles) {
-            debugConsole.log(SeverityEnum.Verbose, "Role Query returned " + roles.length + " roles");
             let rolePromises = [];
             for (let role of roles) {
-                debugConsole.log(SeverityEnum.Verbose, "Querying for User from Role " + role.getName());
                 let userRelation = role.getUsers();
                 let userQuery = userRelation.query();
                 userQuery.equalTo("objectId", author.id);
                 let userPromise = userQuery.first().then(function (user) {
                     if (user) {
-                        debugConsole.log(SeverityEnum.Verbose, "Got User " + user.getUsername() + " from role " + role.getName());
                         let level = role.get(FoodieRole.levelKey);
                         if (level < FoodieRole.defaultDiscoverableLevel) {
                             underDiscoverableLevel = true;
                         }
-                        if (level > FoodieRole.defaultDiscoverableLevel) {
+                        if (level >= FoodieRole.defaultDiscoverableLevel) {
                             overDiscoverableLevel = true;
                         }
                     }
@@ -574,7 +571,7 @@ var FoodieRoleLevel;
 })(FoodieRoleLevel || (FoodieRoleLevel = {}));
 class FoodieRole extends Parse.Role {
 }
-FoodieRole.defaultDiscoverableLevel = 20;
+FoodieRole.defaultDiscoverableLevel = 20; // 20 or higher is visible
 FoodieRole.levelKey = "level";
 //
 //  foodieStory.ts
