@@ -24,7 +24,8 @@ enum StoryActionTypeEnum {
   Swiped = 1,
   Venue = 2,
   Profile = 3,
-  Shared = 4
+  Shared = 4,
+  Bookmark = 5
 };
 
 

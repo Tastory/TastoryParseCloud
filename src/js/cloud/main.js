@@ -43,31 +43,31 @@ Parse.Cloud.beforeSave("FoodieStory", function (request, response) {
     let story = request.object;
     let reputation = story.get(FoodieStory.reputationKey);
     debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id);
-    // Check for Story Validity, Respond with error if deemed Invalid
-    // A valid story must have a Title, a Venue and at least 3 Moments
-    let title = story.get(FoodieStory.titleKey);
-    if (title) {
-        title = title.trim();
-    }
-    let venue = story.get(FoodieStory.venueKey);
-    let moments = story.get(FoodieStory.momentsKey);
-    if (!title) {
-        response.error("Required fields empty - The Title and Venue are essential to a Story!");
-        return;
-    }
-    else {
-        story.set(FoodieStory.titleKey, title);
-    }
-    if (!venue) {
-        response.error("Required fields empty - The Title and Venue are essential to a Story!");
-        return;
-    }
-    if (!moments || moments.length < 3) {
-        response.error("Your Story looks incomplete. Try adding at least 3 Moments.");
-        return;
-    }
     // Initialize Discoverability metrics if new Story
     if (!story.id) {
+        // Check for Story Validity, Respond with error if deemed Invalid
+        // A valid story must have a Title, a Venue and at least 3 Moments
+        let title = story.get(FoodieStory.titleKey);
+        if (title) {
+            title = title.trim();
+        }
+        let venue = story.get(FoodieStory.venueKey);
+        let moments = story.get(FoodieStory.momentsKey);
+        if (!title) {
+            response.error("Required fields empty - The Title and Venue are essential to a Story!");
+            return;
+        }
+        else {
+            story.set(FoodieStory.titleKey, title);
+        }
+        if (!venue) {
+            response.error("Required fields empty - The Title and Venue are essential to a Story!");
+            return;
+        }
+        if (!moments || moments.length < 3) {
+            response.error("Your Story looks incomplete. Try adding at least 3 Moments.");
+            return;
+        }
         debugConsole.log(SeverityEnum.Verbose, "Initializing Discoverability for new Story");
         let author;
         if (!request.user) {
@@ -456,6 +456,58 @@ Parse.Cloud.define("radiusForMinStories", function (req, res) {
     });
 });
 //
+//  universalSearch.ts
+//  TastoryParseCloud
+//
+//  Created by Victor Tsang on 2018-02-21
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
+Parse.Cloud.define("universalSearch", function (req, res) {
+    debugConsole.log(SeverityEnum.Debug, "universalSearch.ts ParseCloudFunction 'universalSearch' triggered");
+    let searchTerm = req.params.keywords;
+    debugConsole.log(SeverityEnum.Debug, "looking up: " + searchTerm);
+    let queryFullName = new Parse.Query(FoodieUser);
+    let queryUserName = new Parse.Query(FoodieUser);
+    let queryStory = new Parse.Query(FoodieStory);
+    let queryVenue = new Parse.Query(FoodieVenue);
+    queryFullName.matches("fullName", searchTerm, "i");
+    queryUserName.matches("username", searchTerm, "i");
+    queryStory.matches("title", searchTerm, "i").include("venue").include("author");
+    queryVenue.matches("name", searchTerm, "i");
+    let userQuery = Parse.Query.or(queryFullName, queryUserName);
+    // limit to 3 results for each category
+    userQuery.limit(3);
+    queryStory.limit(3);
+    queryVenue.limit(3);
+    var searchResults = [];
+    // venue 
+    // 	restaurant name (foursquare)
+    // 	category (foursquare)
+    userQuery.find().then(function (results) {
+        debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " users");
+        let users = results;
+        for (let user of users) {
+            searchResults.push(user);
+        }
+        return queryStory.find();
+    }).then(function (results) {
+        debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " stories");
+        let stories = results;
+        for (let story of stories) {
+            searchResults.push(story);
+        }
+        return queryVenue.find();
+    }).then(function (results) {
+        debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " venues");
+        let venues = results;
+        for (let venue of venues) {
+            searchResults.push(venue);
+        }
+        res.success(searchResults);
+    }, function (error) {
+        res.error(error);
+    });
+});
+//
 //  recalStoryReputation.ts
 //  TastoryParseCloud
 //
@@ -594,6 +646,21 @@ FoodieStory.discoverabilityKey = "discoverability";
 FoodieStory.reputationKey = "reputation";
 Parse.Object.registerSubclass("FoodieStory", FoodieStory);
 //
+//  foodieUser.ts
+//  TastoryParseCloud
+//
+//  Created by Victor Tsang on 2018-02-21
+//  Copyright © 2018 Tastory Lab Inc. All rights reserved.
+//
+class FoodieUser extends Parse.User {
+    constructor() {
+        super("FoodieUser");
+    }
+}
+FoodieUser.fullNameKey = "fullName";
+FoodieUser.usernameKey = "username";
+Parse.User.registerSubclass("FoodieStory", FoodieStory);
+//
 //  foodieVenue.ts
 //  TastoryParseCloud
 //
@@ -642,6 +709,7 @@ var StoryActionTypeEnum;
     StoryActionTypeEnum[StoryActionTypeEnum["Venue"] = 2] = "Venue";
     StoryActionTypeEnum[StoryActionTypeEnum["Profile"] = 3] = "Profile";
     StoryActionTypeEnum[StoryActionTypeEnum["Shared"] = 4] = "Shared";
+    StoryActionTypeEnum[StoryActionTypeEnum["Bookmark"] = 5] = "Bookmark";
 })(StoryActionTypeEnum || (StoryActionTypeEnum = {}));
 ;
 class ReputableClaim extends Parse.Object {
@@ -797,6 +865,7 @@ class ReputableStory extends Parse.Object {
         this.set(ReputableStory.usersClickedVenueKey, 0);
         this.set(ReputableStory.usersClickedProfileKey, 0);
         this.set(ReputableStory.usersSharedKey, 0);
+        this.set(ReputableStory.usersBookmarkedKey, 0);
         this.set(ReputableStory.totalMomentNumberKey, 0);
         this.set(ReputableStory.totalViewsKey, 0);
     }
@@ -873,6 +942,15 @@ class ReputableStory extends Parse.Object {
             return 0;
         }
     }
+    getUsersBookmarked() {
+        let getValue = this.get(ReputableStory.usersBookmarkedKey);
+        if (getValue) {
+            return getValue;
+        }
+        else {
+            return 0;
+        }
+    }
     getTotalMomentNumber() {
         let getValue = this.get(ReputableStory.totalMomentNumberKey);
         if (getValue) {
@@ -924,6 +1002,9 @@ class ReputableStory extends Parse.Object {
             case StoryActionTypeEnum.Profile:
                 this.incUsersClickedProfile();
                 break;
+            case StoryActionTypeEnum.Bookmark:
+                this.incUsersBookmarked();
+                break;
             case StoryActionTypeEnum.Shared:
                 this.incUsersShared();
         }
@@ -939,6 +1020,9 @@ class ReputableStory extends Parse.Object {
     }
     incUsersShared() {
         this.increment(ReputableStory.usersSharedKey);
+    }
+    incUsersBookmarked() {
+        this.increment(ReputableStory.usersBookmarkedKey);
     }
     // View Counts
     incUsersViewed() {
@@ -977,6 +1061,7 @@ class ReputableStory extends Parse.Object {
             "\n" + ReputableStory.usersClickedVenueKey + ": " + this.getUsersClickedVenue() +
             "\n" + ReputableStory.usersClickedProfileKey + ": " + this.getUsersClickedProfile() +
             "\n" + ReputableStory.usersSharedKey + ": " + this.getUsersShared() +
+            "\n" + ReputableStory.usersBookmarkedKey + ": " + this.getUsersBookmarked() +
             "\n" + ReputableStory.totalMomentNumberKey + ": " + this.getTotalMomentNumber() +
             "\n" + ReputableStory.totalViewsKey + ": " + this.getTotalViews());
     }
@@ -990,6 +1075,7 @@ ReputableStory.usersSwipedUpKey = "usersSwipedUp";
 ReputableStory.usersClickedVenueKey = "usersClickedVenue";
 ReputableStory.usersClickedProfileKey = "usersClickedProfile";
 ReputableStory.usersSharedKey = "usersShared";
+ReputableStory.usersBookmarkedKey = "usersBookmarked";
 ReputableStory.totalMomentNumberKey = "totalMomentNumber";
 ReputableStory.totalViewsKey = "totalViews";
 Parse.Object.registerSubclass("ReputableStory", ReputableStory);
@@ -1015,7 +1101,7 @@ Parse.Object.registerSubclass("ReputableUser", ReputableUser);
 //
 class ScoreStoryMetric {
     // MARK: - Constructor
-    constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, percentageSharedWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
+    constructor(baseScore, percentageLikedWeighting, avgMomentWeighting, usersViewedWeighting, percentageSwipedWeighting, percentageClickedProfileWeighting, percentageClickedVenueWeighting, percentageSharedWeighting, percentageBookmarkedWeighting, newnessFactor, newnessHalfLife, decayHalfLife, avgMomentNormalizeConstant, usersViewedNormalizeLogConstant) {
         this.logCalculationSteps = false;
         this.baseScore = baseScore;
         this.percentageLikedWeighting = percentageLikedWeighting;
@@ -1025,6 +1111,7 @@ class ScoreStoryMetric {
         this.percentageClickedProfileWeighting = percentageClickedProfileWeighting;
         this.percentageClickedVenueWeighting = percentageClickedVenueWeighting;
         this.percentageSharedWeighting = percentageSharedWeighting;
+        this.percentageBookmarkedWeighting = percentageBookmarkedWeighting;
         this.newnessFactor = newnessFactor;
         this.newnessHalfLife = newnessHalfLife;
         this.decayHalfLife = decayHalfLife;
@@ -1065,6 +1152,7 @@ class ScoreStoryMetric {
         let percentageClickedProfileWeighted = 0;
         let percentageClickedVenueWeighted = 0;
         let percentageSharedWeighted = 0;
+        let percentageBookmarkedWeighted = 0;
         if (usersViewed != 0) {
             let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
             // Moment number inverse normalization
@@ -1103,6 +1191,12 @@ class ScoreStoryMetric {
                 percentageShared = Math.max(1.0, percentageShared);
             }
             percentageSharedWeighted = this.percentageSharedWeighting * percentageShared;
+            let percentageBookmarked = reputation.getUsersBookmarked() / reputation.getUsersViewed();
+            if (percentageBookmarked > 1.0) {
+                debugConsole.error("percentageBookmarked = " + percentageBookmarked + " exceeded 100%");
+                percentageBookmarked = Math.max(1.0, percentageBookmarked);
+            }
+            percentageBookmarkedWeighted = this.percentageBookmarkedWeighting * percentageBookmarked;
         }
         // Finally the Quality Component Score!!
         let qualityComponent = this.baseScore +
@@ -1111,6 +1205,7 @@ class ScoreStoryMetric {
             percentageClickedProfileWeighted +
             percentageClickedVenueWeighted +
             percentageSharedWeighted +
+            percentageBookmarkedWeighted +
             usersViewedWeighted +
             avgMomentsWeighted;
         if (this.logCalculationSteps) {
@@ -1139,13 +1234,14 @@ ScoreStoryMetric.scoreMetricVer = [
     null,
     // Story Scoring Metric ver. 1
     new ScoreStoryMetric(10, // baseScore: number;
-    40, // percentageLikedWeighting: number;
-    30, // avgMomentWeighting: number;
-    30, // usersViewedWeighting: number;
-    20, // percentageSwipedWeighting: number;
+    30, // percentageLikedWeighting: number;
+    25, // avgMomentWeighting: number;
+    40, // usersViewedWeighting: number;
+    15, // percentageSwipedWeighting: number;
     10, // percentageClickedProfileWeighting: number;
     10, // percentageClickedVenueWeighting: number;
     30, // percentageSharedWeighting: number;
+    20, // percentageBookmarkedWeighting: number;
     90, // newnessFactor: number;
     1.0, // newnessHalfLife: number; (in days)
     120, // decayHalfLife: number; (in days)

@@ -12,35 +12,36 @@ Parse.Cloud.beforeSave("FoodieStory", function(request, response) {
 
   debugConsole.log(SeverityEnum.Verbose, "beforeSave for storyID " + story.id);
 
-  // Check for Story Validity, Respond with error if deemed Invalid
-  // A valid story must have a Title, a Venue and at least 3 Moments
-
-  let title: string = story.get(FoodieStory.titleKey);
-  if (title) { title = title.trim(); }
-
-  let venue: FoodieVenue = story.get(FoodieStory.venueKey);
-  let moments: FoodieMoment[] = story.get(FoodieStory.momentsKey);
-
-  if (!title) {
-    response.error("Required fields empty - The Title and Venue are essential to a Story!");
-    return
-  } else {
-    story.set(FoodieStory.titleKey, title);
-  }
-
-  if (!venue) {
-    response.error("Required fields empty - The Title and Venue are essential to a Story!");
-    return
-  }
-
-  if (!moments || moments.length < 3) {
-    response.error("Your Story looks incomplete. Try adding at least 3 Moments.");
-    return
-  }
-
   // Initialize Discoverability metrics if new Story
 
   if (!story.id) {
+
+    // Check for Story Validity, Respond with error if deemed Invalid
+    // A valid story must have a Title, a Venue and at least 3 Moments
+
+    let title: string = story.get(FoodieStory.titleKey);
+    if (title) { title = title.trim(); }
+
+    let venue: FoodieVenue = story.get(FoodieStory.venueKey);
+    let moments: FoodieMoment[] = story.get(FoodieStory.momentsKey);
+
+    if (!title) {
+      response.error("Required fields empty - The Title and Venue are essential to a Story!");
+      return
+    } else {
+      story.set(FoodieStory.titleKey, title);
+    }
+
+    if (!venue) {
+      response.error("Required fields empty - The Title and Venue are essential to a Story!");
+      return
+    }
+
+    if (!moments || moments.length < 3) {
+      response.error("Your Story looks incomplete. Try adding at least 3 Moments.");
+      return
+    }
+
     debugConsole.log(SeverityEnum.Verbose, "Initializing Discoverability for new Story");
     let author: Parse.User;
 

@@ -23,6 +23,7 @@ class ScoreStoryMetric {
   percentageClickedProfileWeighting: number;
   percentageClickedVenueWeighting: number;
   percentageSharedWeighting: number;
+  percentageBookmarkedWeighting: number;
 
   newnessFactor: number;
   newnessHalfLife: number;
@@ -42,6 +43,7 @@ class ScoreStoryMetric {
               percentageClickedProfileWeighting: number,
               percentageClickedVenueWeighting: number,
               percentageSharedWeighting: number,
+              percentageBookmarkedWeighting: number,
               newnessFactor: number,
               newnessHalfLife: number,
               decayHalfLife: number,
@@ -57,6 +59,7 @@ class ScoreStoryMetric {
     this.percentageClickedProfileWeighting = percentageClickedProfileWeighting;
     this.percentageClickedVenueWeighting = percentageClickedVenueWeighting;
     this.percentageSharedWeighting = percentageSharedWeighting;
+    this.percentageBookmarkedWeighting = percentageBookmarkedWeighting;
 
     this.newnessFactor = newnessFactor;
     this.newnessHalfLife = newnessHalfLife;
@@ -107,6 +110,7 @@ class ScoreStoryMetric {
     let percentageClickedProfileWeighted: number = 0;
     let percentageClickedVenueWeighted: number = 0;
     let percentageSharedWeighted: number = 0;
+    let percentageBookmarkedWeighted: number = 0;
 
     if (usersViewed != 0) {
       let avgMomentsViewed = reputation.getTotalMomentNumber() / reputation.getUsersViewed();
@@ -152,6 +156,13 @@ class ScoreStoryMetric {
         percentageShared = Math.max(1.0, percentageShared);
       }
       percentageSharedWeighted = this.percentageSharedWeighting * percentageShared;
+
+      let percentageBookmarked = reputation.getUsersBookmarked() / reputation.getUsersViewed();
+      if (percentageBookmarked > 1.0) {
+        debugConsole.error("percentageBookmarked = " + percentageBookmarked + " exceeded 100%");
+        percentageBookmarked = Math.max(1.0, percentageBookmarked);
+      }
+      percentageBookmarkedWeighted = this.percentageBookmarkedWeighting * percentageBookmarked;
     }
 
     // Finally the Quality Component Score!!
@@ -161,6 +172,7 @@ class ScoreStoryMetric {
                            percentageClickedProfileWeighted +
                            percentageClickedVenueWeighted +
                            percentageSharedWeighted +
+                           percentageBookmarkedWeighted +
                            usersViewedWeighted +
                            avgMomentsWeighted;
 
@@ -197,12 +209,13 @@ ScoreStoryMetric.scoreMetricVer = [
   new ScoreStoryMetric(10, // baseScore: number;
                        40, // percentageLikedWeighting: number;
                        30, // avgMomentWeighting: number;
-                       30, // usersViewedWeighting: number;
+                       50, // usersViewedWeighting: number;
 
-                       20, // percentageSwipedWeighting: number;
+                       15, // percentageSwipedWeighting: number;
                        10, // percentageClickedProfileWeighting: number;
                        10, // percentageClickedVenueWeighting: number;
                        30, // percentageSharedWeighting: number;
+                       20, // percentageBookmarkedWeighting: number;
 
                        90, // newnessFactor: number;
                        1.0, // newnessHalfLife: number; (in days)
