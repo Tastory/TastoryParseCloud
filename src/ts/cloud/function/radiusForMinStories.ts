@@ -20,7 +20,7 @@ Parse.Cloud.define("radiusForMinStories", function(req, res) {
   let query = new Parse.Query(FoodieStory);
   let venueQuery = new Parse.Query(FoodieVenue);
 
-  let minStories = 10.0 //req.params.minStories;
+  let minStories = req.params.minStories;
   let foundStories = 0;
   let radius = radii[0];
 

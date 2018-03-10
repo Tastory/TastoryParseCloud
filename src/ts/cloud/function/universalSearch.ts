@@ -8,7 +8,7 @@
 
 Parse.Cloud.define("universalSearch", function(req, res) {
   debugConsole.log(SeverityEnum.Debug, "universalSearch.ts ParseCloudFunction 'universalSearch' triggered");
-
+  
   let searchTerm = req.params.keywords
   let location = new Parse.GeoPoint(req.params.latitude, req.params.longitude);
 
@@ -28,10 +28,10 @@ Parse.Cloud.define("universalSearch", function(req, res) {
   queryStory.matches("title", searchTerm, "i").include("venue").include("author")
   queryVenue.matches("name", searchTerm, "i")
 
-  queryFullName.limit(10)
-  queryUserName.limit(10)
-  queryStory.limit(10)
-  queryVenue.limit(10)
+  queryFullName.limit(15)
+  queryUserName.limit(15)
+  queryStory.limit(15)
+  queryVenue.limit(15)
 
   var searchResults:Parse.Object[] = []
   var userResults:FoodieUser[] = []
@@ -90,8 +90,10 @@ function sortNumber(a: any, b: any) {
 }
 
 function rankResults<T extends Parse.Object>(results: Array<T>, attributes: string[], searchTerm: string, rankedResults: Parse.Object[], limit: Number): Number {
+      
+      // stores the parse object and the index indicating where the substring was found 
       var rankMap: Map<string, Array<[T,number]>> = new Map<string, Array<[T,number]>>();
-       // generate list substring index position for rankMap
+      // generate list substring index position for rankMap
       for (let result of results) {
         for (let attribute of attributes) {
           let attributeStr: string = result.get(attribute);
@@ -115,7 +117,7 @@ function rankResults<T extends Parse.Object>(results: Array<T>, attributes: stri
               let resultList:Array<[T,Number]> | undefined = rankMap.get(indexStr)
               var insertIndex: number = 0
 
-              // insertion sort 
+              // insertion sort by the length of the attribute
               for (let result of resultList!) {
                 if (attribute.length >= result[1]) {
                   insertIndex++;
@@ -127,8 +129,8 @@ function rankResults<T extends Parse.Object>(results: Array<T>, attributes: stri
         }
       }
 
+      // sort the index as numbers
       let keyList: Number[] = []
-
       for (let key of rankMap.keys()) {
         keyList.push(Number.parseInt(key))
       }
