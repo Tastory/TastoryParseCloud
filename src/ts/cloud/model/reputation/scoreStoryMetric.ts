@@ -217,7 +217,7 @@ ScoreStoryMetric.scoreMetricVer = [
                        30, // percentageSharedWeighting: number;
                        20, // percentageBookmarkedWeighting: number;
 
-                       80, // newnessFactor: number;
+                       70, // newnessFactor: number;
                        1.0, // newnessHalfLife: number; (in days)
                        360, // decayHalfLife: number; (in days)
 
