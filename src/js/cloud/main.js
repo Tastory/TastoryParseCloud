@@ -346,7 +346,7 @@ Parse.Cloud.define("radiusForMinStories", function (req, res) {
     let location = new Parse.GeoPoint(req.params.latitude, req.params.longitude);
     let query = new Parse.Query(FoodieStory);
     let venueQuery = new Parse.Query(FoodieVenue);
-    let minStories = 10.0; //req.params.minStories;
+    let minStories = req.params.minStories;
     let foundStories = 0;
     let radius = radii[0];
     venueQuery.withinKilometers(FoodieVenue.locationKey, location, radius); // 0.5km
@@ -464,49 +464,123 @@ Parse.Cloud.define("radiusForMinStories", function (req, res) {
 Parse.Cloud.define("universalSearch", function (req, res) {
     debugConsole.log(SeverityEnum.Debug, "universalSearch.ts ParseCloudFunction 'universalSearch' triggered");
     let searchTerm = req.params.keywords;
+    let location = new Parse.GeoPoint(req.params.latitude, req.params.longitude);
     debugConsole.log(SeverityEnum.Debug, "looking up: " + searchTerm);
-    let queryFullName = new Parse.Query(FoodieUser);
-    let queryUserName = new Parse.Query(FoodieUser);
-    let queryStory = new Parse.Query(FoodieStory);
-    let queryVenue = new Parse.Query(FoodieVenue);
+    debugConsole.log(SeverityEnum.Debug, "latitude: " + req.params.latitude);
+    debugConsole.log(SeverityEnum.Debug, "longtitude: " + req.params.longitude);
+    let queryFullName = new Parse.Query(FoodieUser).descending("fullName");
+    let queryUserName = new Parse.Query(FoodieUser).descending("username");
+    let queryStory = new Parse.Query(FoodieStory).descending("title");
+    let queryVenue = new Parse.Query(FoodieVenue).near("location", location);
     queryFullName.matches("fullName", searchTerm, "i");
     queryUserName.matches("username", searchTerm, "i");
     queryStory.matches("title", searchTerm, "i").include("venue").include("author");
     queryVenue.matches("name", searchTerm, "i");
-    let userQuery = Parse.Query.or(queryFullName, queryUserName);
-    // limit to 3 results for each category
-    userQuery.limit(3);
-    queryStory.limit(3);
-    queryVenue.limit(3);
+    queryFullName.limit(15);
+    queryUserName.limit(15);
+    queryStory.limit(15);
+    queryVenue.limit(15);
     var searchResults = [];
-    // venue 
-    // 	restaurant name (foursquare)
-    // 	category (foursquare)
-    userQuery.find().then(function (results) {
+    var userResults = [];
+    queryFullName.find().then(function (results) {
         debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " users");
         let users = results;
         for (let user of users) {
-            searchResults.push(user);
+            userResults.push(user);
         }
+        return queryUserName.find();
+    }).then(function (results) {
+        debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " usernames");
+        let users = results;
+        for (let user of users) {
+            userResults.push(user);
+        }
+        rankResults(userResults, ["fullName", "username"], searchTerm, searchResults, 10);
         return queryStory.find();
     }).then(function (results) {
         debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " stories");
-        let stories = results;
-        for (let story of stories) {
-            searchResults.push(story);
-        }
+        rankResults(results, ["title"], searchTerm, searchResults, 10);
         return queryVenue.find();
     }).then(function (results) {
         debugConsole.log(SeverityEnum.Debug, "Found " + results.length + " venues");
         let venues = results;
+        var numberOfVenues = 0;
         for (let venue of venues) {
+            if (numberOfVenues > 5) {
+                break;
+            }
             searchResults.push(venue);
+            numberOfVenues++;
         }
         res.success(searchResults);
     }, function (error) {
         res.error(error);
     });
 });
+function sortNumber(a, b) {
+    return a - b;
+}
+function rankResults(results, attributes, searchTerm, rankedResults, limit) {
+    // stores the parse object and the index indicating where the substring was found 
+    var rankMap = new Map();
+    // generate list substring index position for rankMap
+    for (let result of results) {
+        for (let attribute of attributes) {
+            let attributeStr = result.get(attribute);
+            if (attributeStr == null) {
+                debugConsole.log(SeverityEnum.Verbose, "Cant find attribute:" + attributeStr + " in the object");
+                continue;
+            }
+            else {
+                var re = new RegExp(searchTerm, 'i');
+                let index = attributeStr.search(re);
+                if (index >= 0) {
+                    let indexStr = index.toString();
+                    if (!rankMap.has(indexStr)) {
+                        rankMap.set(indexStr, new Array());
+                    }
+                    //debugConsole.log(SeverityEnum.Verbose, "found item at position:" + indexStr);
+                    let resultList = rankMap.get(indexStr);
+                    var insertIndex = 0;
+                    // insertion sort by the length of the attribute
+                    for (let result of resultList) {
+                        if (attribute.length >= result[1]) {
+                            insertIndex++;
+                        }
+                    }
+                    resultList.splice(insertIndex, 0, [result, attribute.length]);
+                }
+            }
+        }
+    }
+    // sort the index as numbers
+    let keyList = [];
+    for (let key of rankMap.keys()) {
+        keyList.push(Number.parseInt(key));
+    }
+    keyList.sort(sortNumber);
+    var numOfEntries = 0;
+    for (let key of keyList) {
+        if (numOfEntries >= limit) {
+            break;
+        }
+        let keyStr = key.toString();
+        if (rankMap.has(keyStr)) {
+            let resultList = rankMap.get(keyStr);
+            for (let result of resultList) {
+                if (numOfEntries >= limit) {
+                    break;
+                }
+                numOfEntries++;
+                rankedResults.push(result[0]);
+            }
+        }
+        else {
+            debugConsole.log(SeverityEnum.Verbose, "Failed to find position index key :" + keyStr + " in rankMap");
+        }
+    }
+    return numOfEntries;
+}
 //
 //  recalStoryReputation.ts
 //  TastoryParseCloud
@@ -1234,17 +1308,17 @@ ScoreStoryMetric.scoreMetricVer = [
     null,
     // Story Scoring Metric ver. 1
     new ScoreStoryMetric(10, // baseScore: number;
-    30, // percentageLikedWeighting: number;
-    25, // avgMomentWeighting: number;
-    40, // usersViewedWeighting: number;
+    40, // percentageLikedWeighting: number;
+    30, // avgMomentWeighting: number;
+    50, // usersViewedWeighting: number;
     15, // percentageSwipedWeighting: number;
     10, // percentageClickedProfileWeighting: number;
     10, // percentageClickedVenueWeighting: number;
     30, // percentageSharedWeighting: number;
     20, // percentageBookmarkedWeighting: number;
-    90, // newnessFactor: number;
+    80, // newnessFactor: number;
     1.0, // newnessHalfLife: number; (in days)
-    120, // decayHalfLife: number; (in days)
+    360, // decayHalfLife: number; (in days)
     0.3, // avgMomentNormalizeConstant: number;
     20) // usersViewedNormalizeLogConstant: number;
 ];
